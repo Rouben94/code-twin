@@ -1,5 +1,9 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/CodeTwin.Core/CodeTwin.Core.csproj" />
     <Project Path="src/CodeTwin.Vsix/CodeTwin.Vsix.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CodeTwin.Core.Tests/CodeTwin.Core.Tests.csproj" />
   </Folder>
 </Solution>
