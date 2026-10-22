@@ -22,6 +22,33 @@ function Invoke-Mcp($method, $params) {
 (Invoke-Mcp 'tools/call' @{ name = 'plc_build'; arguments = @{} }).result.structuredContent
 ```
 
-Copilot CLI: add an `http` server with the endpoint and an `Authorization` header from the discovery file to `~/.copilot/mcp-config.json`.
+Copilot CLI: register the server from the discovery file (see [TwinCAT agent plugin](#twincat-agent-plugin)).
+
+## TwinCAT agent plugin
+
+`plugins/twincat` is a Copilot CLI plugin with a `twincat` agent and skills for TwinCAT 3 PLC work: InfoSys search, naming, ST syntax, OOP and patterns, data types and memory, compiler errors, TcUnit and motion. The agent looks things up on Beckhoff InfoSys first (live search), then the web, and edits PLC code only through the CodeTwin MCP server. It never performs online actions (activate, login, download).
+
+Install from this repository's marketplace (or use a local clone path instead of `Rouben94/code-twin`):
+
+```powershell
+copilot plugin marketplace add Rouben94/code-twin
+copilot plugin install twincat@code-twin
+```
+
+Register the CodeTwin MCP server after opening a solution in TwinCAT XAE Shell. Port and token change with every shell start, so re-run this after each restart of the shell:
+
+```powershell
+$d = Get-ChildItem "$env:LOCALAPPDATA\CodeTwin\instances\*.json" | Sort-Object LastWriteTime | Select-Object -Last 1 | Get-Content | ConvertFrom-Json
+copilot mcp remove codetwin
+copilot mcp add --transport http --header "Authorization: Bearer $($d.token)" codetwin $d.endpoint
+```
+
+Use it with `copilot --agent twincat:twincat` or pick `twincat` in `/agent`. The fully qualified name avoids a clash with a user-level agent also called `twincat` (user agents win over plugin agents). Example prompts:
+
+- `Implement F_Add with two INT inputs and call it from MAIN, then build and fix all errors.`
+- `Write TcUnit tests for FB_Valve.`
+- `What does compiler error C0077 mean?`
+
+The InfoSys search runs a PowerShell script from the plugin; approve it when asked. Update with `copilot plugin update twincat@code-twin`, remove with `copilot plugin uninstall twincat@code-twin`.
 
 Licensed under [MPL-2.0](LICENSE).
