@@ -1,0 +1,41 @@
+<Project>
+
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <!-- TcXaeShell 17 (VS 2022 based) loads in-proc packages on .NET Framework only. -->
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>CodeTwin.Vsix</RootNamespace>
+    <GeneratePkgDefFile>true</GeneratePkgDefFile>
+    <UseCodebase>true</UseCodebase>
+    <IncludeAssemblyInVSIXContainer>true</IncludeAssemblyInVSIXContainer>
+    <IncludeDebugSymbolsInVSIXContainer>true</IncludeDebugSymbolsInVSIXContainer>
+    <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
+    <CopyOutputSymbolsToOutputDirectory>true</CopyOutputSymbolsToOutputDirectory>
+    <DeployExtension>false</DeployExtension>
+    <TCatSysManagerLibPath Condition="'$(TCatSysManagerLibPath)' == ''">$(WINDIR)\Microsoft.NET\assembly\GAC_MSIL\TCatSysManagerLib\v4.0_3.4.0.0__180016cd49e5e8c3\TCatSysManagerLib.dll</TCatSysManagerLibPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.10.40171" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <!-- Installed Beckhoff PIA; types are embedded, the DLL is never shipped. -->
+    <Reference Include="TCatSysManagerLib">
+      <HintPath>$(TCatSysManagerLibPath)</HintPath>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+  <!-- Must come after Sdk.targets, otherwise the SDK resets the VSSDK build hooks and no .vsix is produced. -->
+  <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
+
+</Project>
