@@ -20,6 +20,7 @@ public sealed class CodeTwinPackage : AsyncPackage
     public const string PackageGuidString = "4a8e2c71-9d3b-4f56-8e0a-1c7b5d9f2e63";
 
     private PlcTreeReader? reader;
+    private CodeTwinMcpHost? mcpHost;
 
     public override IVsAsyncToolWindowFactory? GetAsyncToolWindowFactory(Guid toolWindowType) =>
         toolWindowType == typeof(PlcTreeToolWindow).GUID ? this : null;
@@ -37,6 +38,7 @@ public sealed class CodeTwinPackage : AsyncPackage
         var dte = await GetServiceAsync(typeof(SDTE)) as DTE
             ?? throw new InvalidOperationException("The DTE service is not available.");
         reader = new PlcTreeReader(dte);
+        mcpHost = CodeTwinMcpHost.Start(new UiThreadPlcAutomation(JoinableTaskFactory, reader));
 
         SolutionEvents.OnAfterBackgroundSolutionLoadComplete += OnSolutionLoaded;
         SolutionEvents.OnAfterCloseSolution += OnSolutionClosed;
@@ -52,6 +54,7 @@ public sealed class CodeTwinPackage : AsyncPackage
         {
             SolutionEvents.OnAfterBackgroundSolutionLoadComplete -= OnSolutionLoaded;
             SolutionEvents.OnAfterCloseSolution -= OnSolutionClosed;
+            mcpHost?.Dispose();
         }
 
         base.Dispose(disposing);
