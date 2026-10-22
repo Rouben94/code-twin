@@ -1,0 +1,13 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "twincat",
+  "version": "0.1.0",
+  "description": "TwinCAT 3 agent and skills: edits, builds and fixes PLC code in a running TwinCAT XAE Shell through the CodeTwin MCP server, using Beckhoff InfoSys as the primary reference.",
+  "author": {
+    "name": "CodeTwin"
+  },
+  "homepage": "https://github.com/Rouben94/code-twin",
+  "repository": "https://github.com/Rouben94/code-twin",
+  "license": "MPL-2.0",
+  "keywords": ["twincat", "beckhoff", "plc", "iec-61131-3", "structured-text"]
+}

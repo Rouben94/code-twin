@@ -1,0 +1,18 @@
+{
+  "name": "code-twin",
+  "owner": {
+    "name": "CodeTwin"
+  },
+  "metadata": {
+    "description": "CodeTwin plugins for AI engineering on TwinCAT 3",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "twincat",
+      "description": "TwinCAT 3 agent and skills for editing, building and fixing PLC code through the CodeTwin MCP server.",
+      "version": "0.1.0",
+      "source": "./plugins/twincat"
+    }
+  ]
+}
