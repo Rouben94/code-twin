@@ -22,7 +22,7 @@ function Invoke-Mcp($method, $params) {
 (Invoke-Mcp 'tools/call' @{ name = 'plc_build'; arguments = @{} }).result.structuredContent
 ```
 
-Copilot CLI: register the server from the discovery file (see [TwinCAT agent plugin](#twincat-agent-plugin)).
+Copilot CLI and other stdio MCP clients connect through the `code-twin-mcp` bridge (see [TwinCAT agent plugin](#twincat-agent-plugin)); no manual registration.
 
 ## TwinCAT agent plugin
 
@@ -35,13 +35,17 @@ copilot plugin marketplace add Rouben94/code-twin
 copilot plugin install twincat@code-twin
 ```
 
-Register the CodeTwin MCP server after opening a solution in TwinCAT XAE Shell. Port and token change with every shell start, so re-run this after each restart of the shell:
+That is the only setup step. The plugin starts its MCP server `codetwin` itself: `plugins/twincat/bin/code-twin-mcp.exe`, a stdio bridge that forwards the tool calls to the CodeTwin server in a running TwinCAT XAE Shell. It needs the .NET 10 runtime and the CodeTwin extension in TwinCAT XAE Shell.
+
+The bridge adds one tool, `initialize`, which the agent calls first with the absolute path of the repository, folder, `.sln`, `.tsproj` or `.plcproj` it works on. It finds the TwinCAT solution, connects to the running shell that has it open (discovery files in `%LOCALAPPDATA%\CodeTwin\instances`), or starts TcXaeShell with it. A shell started this way is launched through Explorer, so it stays open when Copilot exits. Nothing about the repository is stored; the binding lives only as long as the Copilot session. When the shell restarts, the next tool call finds it again. With exactly one shell running, the tools also work without `initialize`.
+
+If you registered the server manually before, remove that registration once, since it clashes with the plugin's `codetwin` server:
 
 ```powershell
-$d = Get-ChildItem "$env:LOCALAPPDATA\CodeTwin\instances\*.json" | Sort-Object LastWriteTime | Select-Object -Last 1 | Get-Content | ConvertFrom-Json
 copilot mcp remove codetwin
-copilot mcp add --transport http --header "Authorization: Bearer $($d.token)" codetwin $d.endpoint
 ```
+
+After changing `src/CodeTwin.Mcp`, refresh the shipped exe with `dotnet publish src\CodeTwin.Mcp -c Release` (writes to `plugins/twincat/bin`). Running Copilot sessions lock the exe; rename it to `code-twin-mcp.exe.old` first, new sessions then use the new exe.
 
 Use it with `copilot --agent twincat:twincat` or pick `twincat` in `/agent`. The fully qualified name avoids a clash with a user-level agent also called `twincat` (user agents win over plugin agents). Example prompts:
 

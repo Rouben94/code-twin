@@ -51,6 +51,9 @@ Clients: in-shell chat, Copilot CLI, Copilot Desktop, Claude Desktop (via stdio�
    (`initialize(<repo or .plcproj path>)`): find the .sln/.tsproj in that repo → ask running
    shells (via discovery files) which one has it open → else launch TcXaeShell with it.
    Nothing about the repo is stored or shared between sessions.
+   Done before Phase 3: the `twincat` plugin ships `code-twin-mcp` and its `mcp.json`, so
+   installing the plugin is the only Copilot CLI setup step. Phase 3 is unchanged and can
+   reuse the bridge.
 5. **Multi-repo use** – in the desktop app add any repo containing a PLC project plus related
    repos; the same agent edits, builds and checks errors in the PLC project through the bridge
    and edits the other repos with normal file tools. Optional per-repo instructions stay in
