@@ -19,7 +19,9 @@ usable from Copilot CLI, Copilot Desktop and Claude Desktop (multi-repo work).
 - VSIX: .NET Framework 4.8 (required by the VS 2022-based TcXaeShell).
 - Bridge (`code-twin-mcp`), tools, tests: .NET 10 LTS (`net10.0-windows`), official MCP C# SDK.
 - Shared core (TcAutomation, tool definitions): multi-target `net48;net10.0-windows` (or netstandard2.0).
-- Chat UI (decided): WebView2 in a native VS tool window, TypeScript front end; VS theme colors passed to CSS variables and updated on theme change. Agent/skills: Markdown.
+- Chat UI: WebView2 in a native VS tool window, plain HTML/JS front end (no npm toolchain in
+  `dotnet build`); VS theme colors passed to CSS variables and updated on theme change. Agent/skills: Markdown.
+- Chat sidecar (`code-twin-chat`): .NET 10, GitHub Copilot SDK driving the installed Copilot CLI.
 
 ## Architecture
 ```
@@ -30,8 +32,9 @@ TcXaeShell (VS 2022 shell)
      │    tools: list/read/grep/write/replace POU, create POU/DUT/GVL/method/property,
      │           build, errors, save; edits keep the editor open
      ├─ Discovery file      – %LOCALAPPDATA%\CodeTwin\instances\<pid>.json (port + token only)
-     └─ Chat tool window    – WebView2 UI ↔ Copilot SDK / CLI sidecar (out-of-proc)
-Clients: in-shell chat, Copilot CLI, Copilot Desktop, Claude Desktop (via stdio→HTTP bridge)
+     └─ Chat tool window    – WebView2 UI ↔ code-twin-chat (Copilot SDK, out-of-proc)
+                               ↔ copilot CLI → in-shell MCP server over HTTP
+Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Desktop (via stdio→HTTP bridge)
 ```
 
 ## Phases
@@ -45,6 +48,17 @@ Clients: in-shell chat, Copilot CLI, Copilot Desktop, Claude Desktop (via stdio�
    TcUnit, motion. Packaged as a Copilot CLI plugin (marketplace in our repo).
 3. **Chat window** – dockable WebView2 chat in the shell, backed by Copilot SDK/CLI sidecar
    with our MCP server + agent preloaded; context = current solution / active POU.
+   Done:
+   - The sidecar runs out of process because the SDK needs newer runtime assemblies than VS 17 binds.
+     It uses the installed, signed-in Copilot CLI instead of the SDK's bundled CLI (~250 MB).
+   - The sidecar connects the session directly to the in-shell HTTP MCP server, not to the bridge.
+     The extension already knows endpoint and token, so there is no discovery, no `initialize`
+     and no doubt about which shell is meant. That also saves a process. The bridge stays for
+     external clients.
+   - The agent and skills ship inside the VSIX (`chat\agents`, `chat\skills`).
+   - Each prompt carries a `<context>` block with the solution and the active POU.
+   - CodeTwin tools and reads are auto-approved; other permission requests are asked in the UI.
+     This uses the SDK's experimental permission API (GHCP001).
 4. **Generic desktop package** – one global Copilot/Claude plugin = agent + skills + MCP config
    pointing to a generic `code-twin-mcp` bridge. Contains NO repository-specific data.
    The project is resolved at call time from the path the desktop app passes
@@ -52,8 +66,8 @@ Clients: in-shell chat, Copilot CLI, Copilot Desktop, Claude Desktop (via stdio�
    shells (via discovery files) which one has it open → else launch TcXaeShell with it.
    Nothing about the repo is stored or shared between sessions.
    Done before Phase 3: the `twincat` plugin ships `code-twin-mcp` and its `mcp.json`, so
-   installing the plugin is the only Copilot CLI setup step. Phase 3 is unchanged and can
-   reuse the bridge.
+   installing the plugin is the only Copilot CLI setup step. Phase 3 uses the in-shell HTTP
+   server directly instead of the bridge (see Phase 3).
 5. **Multi-repo use** – in the desktop app add any repo containing a PLC project plus related
    repos; the same agent edits, builds and checks errors in the PLC project through the bridge
    and edits the other repos with normal file tools. Optional per-repo instructions stay in

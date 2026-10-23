@@ -24,6 +24,20 @@ function Invoke-Mcp($method, $params) {
 
 Copilot CLI and other stdio MCP clients connect through the `code-twin-mcp` bridge (see [TwinCAT agent plugin](#twincat-agent-plugin)); no manual registration.
 
+## Chat window
+
+**View > Other Windows > CodeTwin Chat** (command `View.CodeTwinChat`) opens a dockable chat with the `twincat` agent inside the shell. It works on the solution open in this shell. Each prompt carries the solution and the active POU (the editor that has focus), so there is no `initialize` step. The header shows that context.
+
+Requirements:
+
+- Copilot CLI installed and signed in (`copilot` on `PATH`, or set `COPILOT_CLI_PATH` to `copilot.exe`). The chat uses your Copilot login and subscription.
+- .NET 10 runtime.
+- WebView2 runtime (part of Windows 11 and current Windows 10).
+
+The window hosts a WebView2 page (`src/CodeTwin.Vsix/ChatUi`) and starts the sidecar `chat\code-twin-chat.exe` (`src/CodeTwin.Chat`). The sidecar drives the Copilot CLI through the GitHub Copilot SDK. The VSIX ships its own copy of the `twincat` agent and skills, so the plugin is not needed. The sidecar connects Copilot straight to this shell's MCP server, with endpoint and token passed in by the extension.
+
+CodeTwin tool calls and file reads run without asking. Anything else, such as the PowerShell script of the InfoSys search, shell commands, file writes or URLs, shows an Allow/Deny card in the chat. **New chat** starts a fresh session. The sidecar starts when the window opens and stops with the shell.
+
 ## TwinCAT agent plugin
 
 `plugins/twincat` is a Copilot CLI plugin with a `twincat` agent and skills for TwinCAT 3 PLC work: InfoSys search, naming, ST syntax, OOP and patterns, data types and memory, compiler errors, TcUnit and motion. The agent looks things up on Beckhoff InfoSys first (live search), then the web, and edits PLC code only through the CodeTwin MCP server. It never performs online actions (activate, login, download).
