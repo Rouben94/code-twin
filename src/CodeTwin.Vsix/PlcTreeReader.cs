@@ -59,6 +59,23 @@ internal sealed class PlcTreeReader(DTE dte)
         return elements;
     }
 
+    /// <summary>Finds element paths by element name, reading names only so it stays cheap on large projects.</summary>
+    public IReadOnlyList<string> FindElementPaths(string name)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        List<string> paths = [];
+        foreach (Project project in dte.Solution.Projects)
+        {
+            if (project.Object is ITcSysManager sysManager)
+            {
+                FindElementPaths(sysManager.LookupTreeItem(PlcConfigurationPath), project.Name, name, paths);
+            }
+        }
+
+        return paths;
+    }
+
     public PlcElement? ReadElement(string path)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -250,6 +267,21 @@ internal sealed class PlcTreeReader(DTE dte)
             ReadElements(projectName, child, path + "/" + child.Name, elements);
         }
     }
+    private static void FindElementPaths(ITcSmTreeItem item, string path, string name, ICollection<string> paths)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        if (string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase))
+        {
+            paths.Add(path);
+        }
+
+        foreach (ITcSmTreeItem child in item)
+        {
+            FindElementPaths(child, path + "/" + child.Name, name, paths);
+        }
+    }
+
     [SuppressMessage("Usage", "VSTHRD010", Justification = "The write entry point validates the Visual Studio UI thread before calling this helper.")]
     private ITcSmTreeItem? FindItem(string path)
     {

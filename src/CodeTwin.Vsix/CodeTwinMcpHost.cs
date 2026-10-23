@@ -14,11 +14,16 @@ internal sealed class CodeTwinMcpHost : IDisposable
     private readonly InProcessMcpServer server;
     private readonly string discoveryPath;
 
-    private CodeTwinMcpHost(InProcessMcpServer server, string discoveryPath)
+    private CodeTwinMcpHost(InProcessMcpServer server, string token, string discoveryPath)
     {
         this.server = server;
+        Token = token;
         this.discoveryPath = discoveryPath;
     }
+
+    public string Endpoint => server.Endpoint;
+
+    public string Token { get; }
 
     public static CodeTwinMcpHost Start(IPlcAutomation automation)
     {
@@ -40,7 +45,7 @@ internal sealed class CodeTwinMcpHost : IDisposable
             token,
         };
         File.WriteAllText(path, JsonSerializer.Serialize(discovery));
-        return new CodeTwinMcpHost(server, path);
+        return new CodeTwinMcpHost(server, token, path);
     }
 
     public void Dispose()

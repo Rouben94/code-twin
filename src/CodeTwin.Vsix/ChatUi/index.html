@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>CodeTwin Chat</title>
+  <link rel="stylesheet" href="chat.css">
+</head>
+<body>
+  <header>
+    <div id="context" title="">No solution open</div>
+    <button id="new-chat" type="button" title="Start a new conversation">New chat</button>
+  </header>
+  <main id="messages">
+    <div id="status" class="note">Starting GitHub Copilot...</div>
+  </main>
+  <form id="composer">
+    <textarea id="prompt" rows="3" placeholder="Ask the twincat agent to read, edit, build or fix PLC code (Enter to send, Shift+Enter for a new line)"></textarea>
+    <button id="send" type="submit">Send</button>
+  </form>
+  <script src="markdown.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>

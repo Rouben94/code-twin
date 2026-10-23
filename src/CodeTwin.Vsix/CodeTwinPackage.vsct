@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommandTable xmlns="http://schemas.microsoft.com/VisualStudio/2005-10-18/CommandTable" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <Extern href="stdidcmd.h" />
+  <Extern href="vsshlids.h" />
+
+  <Commands package="guidCodeTwinPackage">
+    <Buttons>
+      <Button guid="guidCodeTwinCommandSet" id="cmdidShowChat" priority="0x0100" type="Button">
+        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+        <Strings>
+          <ButtonText>CodeTwin Chat</ButtonText>
+          <CanonicalName>.View.CodeTwinChat</CanonicalName>
+          <LocCanonicalName>.View.CodeTwinChat</LocCanonicalName>
+        </Strings>
+      </Button>
+    </Buttons>
+  </Commands>
+
+  <Symbols>
+    <GuidSymbol name="guidCodeTwinPackage" value="{4a8e2c71-9d3b-4f56-8e0a-1c7b5d9f2e63}" />
+    <GuidSymbol name="guidCodeTwinCommandSet" value="{8f3a1d6c-2b7e-4c95-a0d4-6e1f9b3c7a28}">
+      <IDSymbol name="cmdidShowChat" value="0x0100" />
+    </GuidSymbol>
+  </Symbols>
+</CommandTable>

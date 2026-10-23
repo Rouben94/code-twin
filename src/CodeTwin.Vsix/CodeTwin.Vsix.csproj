@@ -20,6 +20,17 @@
     <ProjectReference Include="..\CodeTwin.Core\CodeTwin.Core.csproj" />
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.10.40171" ExcludeAssets="runtime" />
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2142" PrivateAssets="all" />
+    <!-- Must match the WebView2 assemblies TcXaeShell ships in PrivateAssemblies (its binding redirect ends at 1.0.2151.40); only the native loaders under runtimes\ are packaged. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2151.40" ExcludeAssets="runtime" />
+    <!-- Builds the chat sidecar first; it is published into the VSIX by PublishChatSidecar below. -->
+    <ProjectReference Include="..\CodeTwin.Chat\CodeTwin.Chat.csproj" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <VSCTCompile Include="CodeTwinPackage.vsct" ResourceName="Menus.ctmenu" />
+    <Content Include="ChatUi\**" IncludeInVSIX="true" />
+    <Content Include="..\..\plugins\twincat\com.github.copilot\agents\*.md" Link="chat\agents\%(Filename)%(Extension)" IncludeInVSIX="true" VSIXSubPath="chat\agents" />
+    <Content Include="..\..\plugins\twincat\skills\**" Link="chat\skills\%(RecursiveDir)%(Filename)%(Extension)" IncludeInVSIX="true" VSIXSubPath="chat\skills\%(RecursiveDir)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +38,7 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="WindowsBase" />
     <Reference Include="System.Xaml" />
+    <Reference Include="System.Design" />
     <!-- Installed Beckhoff PIA; types are embedded, the DLL is never shipped. -->
     <Reference Include="TCatSysManagerLib">
       <HintPath>$(TCatSysManagerLibPath)</HintPath>
@@ -34,6 +46,13 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PublishChatSidecar" BeforeTargets="AssignTargetPaths">
+    <MSBuild Projects="..\CodeTwin.Chat\CodeTwin.Chat.csproj" Targets="Publish" Properties="Configuration=$(Configuration);NoBuild=true;PublishDir=$(ProjectDir)$(IntermediateOutputPath)chat\" />
+    <ItemGroup>
+      <Content Include="$(IntermediateOutputPath)chat\code-twin-chat.exe" IncludeInVSIX="true" VSIXSubPath="chat" />
+    </ItemGroup>
+  </Target>
 
   <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
   <!-- Must come after Sdk.targets, otherwise the SDK resets the VSSDK build hooks and no .vsix is produced. -->
