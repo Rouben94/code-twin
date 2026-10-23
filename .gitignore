@@ -31,6 +31,9 @@ x86/
 [Aa][Rr][Mm]64/
 bld/
 [Bb]in/
+# The twincat plugin ships the published code-twin-mcp bridge.
+!plugins/twincat/bin/
+plugins/twincat/bin/*.old
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
