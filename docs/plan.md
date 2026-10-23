@@ -59,7 +59,18 @@ Clients: in-shell chat, Copilot CLI, Copilot Desktop, Claude Desktop (via stdio�
    and edits the other repos with normal file tools. Optional per-repo instructions stay in
    that repo (e.g. `.github/copilot-instructions.md`), never in the package.
 6. **Hardening** – permission modes (read / edit / build / online), blocked AMS Net IDs,
-   no activate/login/start without confirmation, signed VSIX, installer, tests.
+   no activate/login/start without confirmation, signed VSIX, tests.
+   - Installer (one setup, per user, with uninstall): installs the VSIX into TcXaeShell and
+     `code-twin-mcp` into a fixed folder, then registers the bridge with the clients it finds,
+     through each client's own CLI where one exists (no hand-edited foreign config files).
+   - Client packages, all using the same bridge and skills (`SKILL.md`):
+     - Copilot CLI / Copilot app: `twincat` plugin (agent + skills + `mcp.json`), as today
+     - Claude Code: plugin with the `twincat` agent, skills and MCP config
+     - Codex CLI, VS Code / Cursor: MCP registration; agent and skills where the client supports them
+     - Claude Desktop: MCP registration (config entry or `.mcpb` bundle)
+     - ChatGPT desktop: verify whether local (stdio) MCP servers are supported; otherwise out of scope
+   - The TwinCAT rules live only in the `twincat` agent and apply only when the user picks it.
+     The MCP server's instructions stay limited to tool usage (call `initialize` first).
 7. **Beyond PLC code (System Manager)** – generic tree tools on ITcSmTreeItem
    (LookupTreeItem, CreateChild, ProduceXml/ConsumeXml, LinkVariables) plus domain skills:
    - I/O / EtherCAT: scan (guarded), add boxes/terminals, PDO config, variable linking
