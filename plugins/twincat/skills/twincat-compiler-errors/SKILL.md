@@ -7,7 +7,7 @@ description: Diagnose and fix TwinCAT 3 PLC compiler errors and warnings (Cxxxx 
 
 ## Workflow
 
-1. `plc_build`, then `plc_get_errors` if the build result does not list everything.
+1. `plc_build`. Each diagnostic has `Severity`, `Code` (e.g. `C0046`), `Description`, `FileName` (with `(Decl)` / `(Impl)` suffix) and a 1-based `Line`. The build result lists only this build's entries; `plc_get_errors` also shows live precompile results for the whole project, including elements the build did not report.
 2. Fix the **first error of each element first**. One syntax error (missing `;`, `END_IF`, `THEN`) often causes a cascade of follow-up errors in the same element; rebuild after fixing it instead of chasing the rest.
 3. `plc_read_element` the element named in the error before changing it. The error may originate elsewhere (a changed type, a renamed method, a missing library); search with `plc_search_elements`.
 4. Look up any code you do not know: run `infosys-search` with `Compiler Error C0xxx` (or `Compiler Warning C0xxx`). The pages give the message, cause and a minimal example.

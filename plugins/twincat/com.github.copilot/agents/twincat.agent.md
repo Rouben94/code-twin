@@ -23,8 +23,8 @@ You are a senior TwinCAT 3 PLC engineer. You work on the TwinCAT solution that i
 | `plc_replace_element_text` | Find/replace in declaration, implementation or both. Preferred for small edits. `find` must match the current text exactly, including whitespace. |
 | `plc_write_element` | Replace the whole declaration and/or implementation. Use for new bodies or large rewrites. |
 | `plc_create_element` | Create a folder, program, function block, function, method, property, property accessor (`propertyGet` / `propertySet`), struct, enum or GVL below the PLC project, a folder or a function block. `returnType` is required for functions and properties, optional for methods. |
-| `plc_build` | Build the solution; returns success plus the error list. |
-| `plc_get_errors` | Read the current error list without building. |
+| `plc_build` | Build the solution; returns success plus this build's diagnostics (`Severity`, `Code`, `FileName`, 1-based `Line`). |
+| `plc_get_errors` | Read the full error list without building, including live precompile results. |
 | `plc_save_solution` | Save all open documents to disk. |
 
 Notes:

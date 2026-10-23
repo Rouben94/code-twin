@@ -306,13 +306,13 @@ public sealed class InProcessMcpServer : IDisposable
             tools.Add(new
             {
                 name = "plc_build",
-                description = "Build the open TwinCAT solution and return whether it succeeded plus the error list.",
+                description = "Build the open TwinCAT solution and return whether it succeeded plus the error list. Each diagnostic has Severity (error, warning, message), Code (e.g. C0046), Description, FileName, 1-based Line and Project.",
                 inputSchema = new { type = "object", properties = new { } },
             });
             tools.Add(new
             {
                 name = "plc_get_errors",
-                description = "Read the current error list (errors, warnings, messages) of the TwinCAT shell.",
+                description = "Read the current error list (errors, warnings, messages) of the TwinCAT shell, including live precompile results. Same diagnostic shape as plc_build.",
                 inputSchema = new { type = "object", properties = new { } },
             });
         }

@@ -220,6 +220,7 @@ public sealed class InProcessMcpServerTests
         JsonElement buildResult = build.GetProperty("result").GetProperty("structuredContent");
         Assert.False(buildResult.GetProperty("Succeeded").GetBoolean());
         Assert.Equal(3, buildResult.GetProperty("Diagnostics")[0].GetProperty("Line").GetInt32());
+        Assert.Equal("C0077", buildResult.GetProperty("Diagnostics")[0].GetProperty("Code").GetString());
 
         JsonElement errors = await SendAsync(client, 2, "tools/call", new { name = "plc_get_errors", arguments = new { } });
         Assert.Equal("error", errors.GetProperty("result").GetProperty("structuredContent")[0].GetProperty("Severity").GetString());
@@ -359,7 +360,7 @@ public sealed class InProcessMcpServerTests
         public PlcBuildResult Build() => new(false, GetDiagnostics());
 
         public IReadOnlyList<PlcDiagnostic> GetDiagnostics() =>
-            new[] { new PlcDiagnostic("error", "C0077: Unknown type: 'FOO'", "MAIN.TcPOU", 3, 5, "Demo") };
+            new[] { new PlcDiagnostic("error", "Unknown type: 'FOO'", "MAIN.TcPOU", 3, 5, "Demo", "C0077") };
 
         private static string? Replace(string? source, string find, string replace, bool replaceAll, ref int count)
         {

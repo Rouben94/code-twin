@@ -6,14 +6,13 @@ using System.Runtime.InteropServices;
 using System.Linq;
 using CodeTwin.Core;
 using EnvDTE;
-using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
 using TCatSysManagerLib;
 
 namespace CodeTwin.Vsix;
 
 /// <summary>Reads the PLC part of every TwinCAT project in the open solution via the Automation Interface.</summary>
-internal sealed class PlcTreeReader(DTE dte) : IPlcAutomationWriter
+internal sealed class PlcTreeReader(DTE dte)
 {
     private const string PlcConfigurationPath = "TIPC";
 
@@ -216,48 +215,13 @@ internal sealed class PlcTreeReader(DTE dte) : IPlcAutomationWriter
         return ReadElement(path) ?? throw new InvalidOperationException($"PLC element '{path}' was not found after creation.");
     }
 
-    public PlcBuildResult Build()
+    /// <summary>Builds the solution and returns whether the build succeeded.</summary>
+    public bool Build()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         SolutionBuild solutionBuild = dte.Solution.SolutionBuild;
         solutionBuild.Build(WaitForBuildToFinish: true);
-        return new PlcBuildResult(solutionBuild.LastBuildInfo == 0, GetDiagnostics());
-    }
-
-    public IReadOnlyList<PlcDiagnostic> GetDiagnostics()
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        ErrorItems items = ((DTE2)dte).ToolWindows.ErrorList.ErrorItems;
-        List<PlcDiagnostic> diagnostics = [];
-        for (int index = 1; index <= items.Count; index++)
-        {
-            diagnostics.Add(ReadDiagnostic(items.Item(index)));
-        }
-
-        return diagnostics;
-    }
-
-    private static string DescribeErrorLevel(vsBuildErrorLevel level) => level switch
-    {
-        vsBuildErrorLevel.vsBuildErrorLevelHigh => "error",
-        vsBuildErrorLevel.vsBuildErrorLevelMedium => "warning",
-        _ => "message",
-    };
-
-    private static PlcDiagnostic ReadDiagnostic(ErrorItem item)
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        string severity = DescribeErrorLevel(item.ErrorLevel);
-        string description = item.Description;
-        try
-        {
-            return new PlcDiagnostic(severity, description, item.FileName, item.Line, item.Column, item.Project);
-        }
-        catch (COMException)
-        {
-            // Items not tied to a file (e.g. license messages) may throw when location properties are read.
-            return new PlcDiagnostic(severity, description, null, 0, 0, null);
-        }
+        return solutionBuild.LastBuildInfo == 0;
     }
 
     private static PlcTreeNode ReadItem(ITcSmTreeItem item)

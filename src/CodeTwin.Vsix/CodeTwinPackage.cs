@@ -37,8 +37,11 @@ public sealed class CodeTwinPackage : AsyncPackage
 
         var dte = await GetServiceAsync(typeof(SDTE)) as DTE
             ?? throw new InvalidOperationException("The DTE service is not available.");
+        var errorList = await GetServiceAsync(typeof(SVsErrorList)) as IErrorList
+            ?? throw new InvalidOperationException("The Error List service is not available.");
         reader = new PlcTreeReader(dte);
-        mcpHost = CodeTwinMcpHost.Start(new UiThreadPlcAutomation(JoinableTaskFactory, reader));
+        mcpHost = CodeTwinMcpHost.Start(
+            new UiThreadPlcAutomation(JoinableTaskFactory, reader, new ErrorListReader(JoinableTaskFactory, errorList)));
 
         SolutionEvents.OnAfterBackgroundSolutionLoadComplete += OnSolutionLoaded;
         SolutionEvents.OnAfterCloseSolution += OnSolutionClosed;

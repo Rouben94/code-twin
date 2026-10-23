@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using CodeTwin.Core;
 using Microsoft.VisualStudio.Threading;
 
@@ -8,7 +9,7 @@ namespace CodeTwin.Vsix;
 
 /// <summary>Marshals every Automation Interface call from the MCP request thread to the Visual Studio UI thread.</summary>
 [SuppressMessage("Usage", "VSTHRD010", Justification = "Run switches to the main thread before invoking each delegate.")]
-internal sealed class UiThreadPlcAutomation(JoinableTaskFactory joinableTaskFactory, PlcTreeReader reader) : IPlcAutomationWriter
+internal sealed class UiThreadPlcAutomation(JoinableTaskFactory joinableTaskFactory, PlcTreeReader reader, ErrorListReader errorList) : IPlcAutomationWriter
 {
     public IReadOnlyList<PlcElement> ListElements() => Run(reader.ListElements);
 
@@ -30,9 +31,21 @@ internal sealed class UiThreadPlcAutomation(JoinableTaskFactory joinableTaskFact
 
     public PlcElement CreateElement(PlcCreateRequest request) => Run(() => reader.CreateElement(request));
 
-    public PlcBuildResult Build() => Run(reader.Build);
+    public PlcBuildResult Build() =>
+        joinableTaskFactory.Run(async () =>
+        {
+            // TwinCAT never clears its own "build ... failed" log lines, so file-less messages from earlier builds are dropped.
+            HashSet<string> earlierMessages =
+                [.. (await errorList.ReadAsync(buildOnly: true)).Where(d => d.FileName is null).Select(d => d.Description)];
+            await joinableTaskFactory.SwitchToMainThreadAsync();
+            bool succeeded = reader.Build();
+            IReadOnlyList<PlcDiagnostic> diagnostics = await errorList.ReadAsync(buildOnly: true);
+            return new PlcBuildResult(
+                succeeded,
+                [.. diagnostics.Where(d => d.FileName is not null || !earlierMessages.Contains(d.Description))]);
+        });
 
-    public IReadOnlyList<PlcDiagnostic> GetDiagnostics() => Run(reader.GetDiagnostics);
+    public IReadOnlyList<PlcDiagnostic> GetDiagnostics() => joinableTaskFactory.Run(() => errorList.ReadAsync(buildOnly: false));
 
     private T Run<T>(Func<T> action) =>
         joinableTaskFactory.Run(async () =>

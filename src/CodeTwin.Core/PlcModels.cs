@@ -42,7 +42,7 @@ public interface IPlcAutomationWriter : IPlcAutomation
 
 public sealed class PlcDiagnostic
 {
-    public PlcDiagnostic(string severity, string description, string? fileName, int line, int column, string? project)
+    public PlcDiagnostic(string severity, string description, string? fileName, int line, int column, string? project, string? code)
     {
         Severity = severity;
         Description = description;
@@ -50,9 +50,11 @@ public sealed class PlcDiagnostic
         Line = line;
         Column = column;
         Project = project;
+        Code = code;
     }
 
     public string Severity { get; }
+    public string? Code { get; }
     public string Description { get; }
     public string? FileName { get; }
     public int Line { get; }
