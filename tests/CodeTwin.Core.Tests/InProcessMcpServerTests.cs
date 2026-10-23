@@ -156,6 +156,30 @@ public sealed class InProcessMcpServerTests
 
         JsonElement unknownTool = await SendAsync(client, 4, "tools/call", new { name = "plc_unknown", arguments = new { } });
         Assert.Equal(-32602, unknownTool.GetProperty("error").GetProperty("code").GetInt32());
+
+        JsonElement folder = await SendAsync(client, 5, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", name = "Test", kind = "folder" },
+        });
+        Assert.Equal("Demo/TIPC/POUs/Test", folder.GetProperty("result").GetProperty("structuredContent").GetProperty("Path").GetString());
+        Assert.Equal(PlcElementKind.Folder, automation.LastCreateRequest?.Kind);
+
+        JsonElement folderWithCode = await SendAsync(client, 6, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", name = "Test2", kind = "folder", implementation = "x := 1;" },
+        });
+        Assert.True(folderWithCode.GetProperty("result").GetProperty("isError").GetBoolean());
+
+        automation.CreateFailure = new NotImplementedException("Not supported.");
+        JsonElement unexpected = await SendAsync(client, 7, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", name = "Run", kind = "method" },
+        });
+        Assert.True(unexpected.GetProperty("result").GetProperty("isError").GetBoolean());
+        Assert.Contains("Not supported.", unexpected.GetProperty("result").GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -295,9 +319,16 @@ public sealed class InProcessMcpServerTests
                 throw new KeyNotFoundException($"PLC element '{request.ParentPath}' was not found.");
             }
 
+            if (CreateFailure is not null)
+            {
+                throw CreateFailure;
+            }
+
             LastCreateRequest = request;
             return new PlcElement(element.ProjectName, request.Name, request.ParentPath + "/" + request.Name, request.Kind.ToString(), request.Declaration, request.Implementation);
         }
+
+        public Exception? CreateFailure { get; set; }
 
         public PlcCreateRequest? LastCreateRequest { get; private set; }
 

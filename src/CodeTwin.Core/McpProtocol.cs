@@ -16,6 +16,7 @@ public sealed class InProcessMcpServer : IDisposable
 {
     private static readonly IReadOnlyDictionary<string, PlcElementKind> ElementKinds = new Dictionary<string, PlcElementKind>(StringComparer.Ordinal)
     {
+        ["folder"] = PlcElementKind.Folder,
         ["program"] = PlcElementKind.Program,
         ["functionBlock"] = PlcElementKind.FunctionBlock,
         ["function"] = PlcElementKind.Function,
@@ -281,8 +282,8 @@ public sealed class InProcessMcpServer : IDisposable
             tools.Add(new
             {
                 name = "plc_create_element",
-                description = "Create a Structured Text POU, method, property, DUT, or GVL below a PLC element (e.g. the POUs folder or a function block). "
-                    + "returnType is required for function and property. Optional declaration and implementation replace the generated text.",
+                description = "Create a folder, Structured Text POU, method, property, DUT, or GVL below a PLC element (e.g. the PLC project, a folder or a function block). "
+                    + "returnType is required for function and property and optional for method. Optional declaration and implementation replace the generated text; folders take neither.",
                 inputSchema = new
                 {
                     type = "object",
@@ -344,11 +345,13 @@ public sealed class InProcessMcpServer : IDisposable
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or KeyNotFoundException or COMException)
         {
-            return new
-            {
-                content = new[] { new { type = "text", text = exception.Message } },
-                isError = true,
-            };
+            return ToolError(exception.Message);
+        }
+        catch (Exception exception)
+        {
+            // Automation Interface calls can fail with arbitrary COM-mapped exceptions; report them to the agent instead of failing the request.
+            Trace.TraceError("CodeTwin tool '{0}' failed: {1}", name, exception);
+            return ToolError($"{exception.GetType().Name}: {exception.Message}");
         }
 
         string text = JsonSerializer.Serialize(content);
@@ -450,14 +453,27 @@ public sealed class InProcessMcpServer : IDisposable
             throw new ArgumentException($"The 'returnType' value is required for kind '{kind}'.");
         }
 
+        string? declaration = GetOptionalString(arguments, "declaration");
+        string? implementation = GetOptionalString(arguments, "implementation");
+        if (elementKind == PlcElementKind.Folder && (declaration is not null || implementation is not null))
+        {
+            throw new ArgumentException("A folder has no declaration or implementation.");
+        }
+
         return writer.CreateElement(new PlcCreateRequest(
             parentPath,
             name,
             elementKind,
             returnType,
-            GetOptionalString(arguments, "declaration"),
-            GetOptionalString(arguments, "implementation")));
+            declaration,
+            implementation));
     }
+
+    private static object ToolError(string message) => new
+    {
+        content = new[] { new { type = "text", text = message } },
+        isError = true,
+    };
 
     private static string? GetOptionalString(JsonElement arguments, string name) =>
         arguments.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String

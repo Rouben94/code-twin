@@ -182,10 +182,11 @@ internal sealed class PlcTreeReader(DTE dte) : IPlcAutomationWriter
         const IECLANGUAGETYPES Language = IECLANGUAGETYPES.IECLANGUAGE_ST;
         (int subType, object? info) = request.Kind switch
         {
+            PlcElementKind.Folder => (601, null),
             PlcElementKind.Program => (602, (object?)Language),
             PlcElementKind.FunctionBlock => (604, Language),
             PlcElementKind.Function => (603, new object?[] { Language, request.ReturnType }),
-            PlcElementKind.Method => (609, request.ReturnType is null ? Language : new object?[] { Language, request.ReturnType }),
+            PlcElementKind.Method => (609, new object?[] { Language, request.ReturnType }),
             PlcElementKind.Property => (611, new object?[] { Language, request.ReturnType }),
             PlcElementKind.Struct => (606, request.Declaration),
             PlcElementKind.Enum => (605, request.Declaration),

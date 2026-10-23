@@ -74,6 +74,7 @@ public sealed class PlcBuildResult
 
 public enum PlcElementKind
 {
+    Folder,
     Program,
     FunctionBlock,
     Function,

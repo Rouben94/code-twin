@@ -48,7 +48,7 @@ END_VAR
 TcUnit.RUN();
 ```
 
-With CodeTwin: create the FB with `plc_create_element` (`kind` `functionBlock`, declaration with `EXTENDS TcUnit.FB_TestSuite`), add each test with `kind` `method`, write bodies with `plc_write_element`, then `plc_build`.
+With CodeTwin: create the `Test` folder if missing (`kind` `folder`), create the FB with `plc_create_element` (`kind` `functionBlock`, declaration with `EXTENDS TcUnit.FB_TestSuite`), add each test with `kind` `method`, write bodies with `plc_write_element`, then `plc_build`.
 
 ## Asserts
 
