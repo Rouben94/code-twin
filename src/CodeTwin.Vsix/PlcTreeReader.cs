@@ -188,6 +188,8 @@ internal sealed class PlcTreeReader(DTE dte) : IPlcAutomationWriter
             PlcElementKind.Function => (603, new object?[] { Language, request.ReturnType }),
             PlcElementKind.Method => (609, new object?[] { Language, request.ReturnType }),
             PlcElementKind.Property => (611, new object?[] { Language, request.ReturnType }),
+            PlcElementKind.PropertyGet => (613, null),
+            PlcElementKind.PropertySet => (614, null),
             PlcElementKind.Struct => (606, request.Declaration),
             PlcElementKind.Enum => (605, request.Declaration),
             PlcElementKind.GlobalVariableList => (615, request.Declaration),

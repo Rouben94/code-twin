@@ -19,7 +19,7 @@ TwinCAT 3 extends IEC 61131-3 with methods, properties, interfaces and inheritan
 | `THIS^`, `SUPER^` | Current instance, base implementation (`SUPER^.Reset();`). |
 | `FB_init`, `FB_reinit`, `FB_exit` | Constructor-like hooks. `FB_init(bInitRetains : BOOL; bInCopyCode : BOOL; <own params>)` lets you pass dependencies at declaration: `cylinder : FB_Cylinder(valve := mainValve);`. Keep the two system parameter names exactly as shown. |
 
-Create these elements with `plc_create_element` (`kind`: `method`, `property`, `functionBlock`); `parentPath` of a method or property is the FB's element path. CodeTwin cannot create or edit property accessors (`Get` / `Set`) yet; ask the user to add them in the XAE Shell, or use a method (`GetValue()`) when that is acceptable.
+Create these elements with `plc_create_element` (`kind`: `method`, `property`, `functionBlock`); `parentPath` of a method or property is the FB's element path. A property starts without accessors: add `Get` and, unless read-only, `Set` with `kind` `propertyGet` / `propertySet` and the property's path as `parentPath`. Edit them at `<property path>/Get` and `<property path>/Set`. Example getter body: `Ready := _ready;`.
 
 ## Interfaces and references
 

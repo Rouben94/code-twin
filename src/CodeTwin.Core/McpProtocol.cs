@@ -22,6 +22,8 @@ public sealed class InProcessMcpServer : IDisposable
         ["function"] = PlcElementKind.Function,
         ["method"] = PlcElementKind.Method,
         ["property"] = PlcElementKind.Property,
+        ["propertyGet"] = PlcElementKind.PropertyGet,
+        ["propertySet"] = PlcElementKind.PropertySet,
         ["struct"] = PlcElementKind.Struct,
         ["enum"] = PlcElementKind.Enum,
         ["gvl"] = PlcElementKind.GlobalVariableList,
@@ -282,8 +284,10 @@ public sealed class InProcessMcpServer : IDisposable
             tools.Add(new
             {
                 name = "plc_create_element",
-                description = "Create a folder, Structured Text POU, method, property, DUT, or GVL below a PLC element (e.g. the PLC project, a folder or a function block). "
-                    + "returnType is required for function and property and optional for method. Optional declaration and implementation replace the generated text; folders take neither.",
+                description = "Create a folder, Structured Text POU, method, property, property accessor, DUT, or GVL below a PLC element (e.g. the PLC project, a folder or a function block). "
+                    + "returnType is required for function and property and optional for method. A new property has no accessors: add them with kind propertyGet / propertySet and the property as parentPath; "
+                    + "name is optional for accessors (always Get / Set). Edit an existing accessor at '<property path>/Get' or '<property path>/Set'. "
+                    + "Optional declaration and implementation replace the generated text; folders take neither.",
                 inputSchema = new
                 {
                     type = "object",
@@ -296,7 +300,7 @@ public sealed class InProcessMcpServer : IDisposable
                         declaration = new { type = "string" },
                         implementation = new { type = "string" },
                     },
-                    required = new[] { "parentPath", "name", "kind" },
+                    required = new[] { "parentPath", "kind" },
                 },
             });
             tools.Add(new
@@ -435,16 +439,21 @@ public sealed class InProcessMcpServer : IDisposable
         }
 
         string parentPath = arguments.GetProperty("parentPath").GetString() ?? string.Empty;
-        string name = arguments.GetProperty("name").GetString() ?? string.Empty;
         string kind = arguments.GetProperty("kind").GetString() ?? string.Empty;
-        if (name.Length == 0)
-        {
-            throw new ArgumentException("The 'name' value cannot be empty.");
-        }
-
         if (!ElementKinds.TryGetValue(kind, out PlcElementKind elementKind))
         {
             throw new ArgumentException($"The 'kind' value must be one of: {string.Join(", ", ElementKinds.Keys)}.");
+        }
+
+        string name = elementKind switch
+        {
+            PlcElementKind.PropertyGet => "Get",
+            PlcElementKind.PropertySet => "Set",
+            _ => GetOptionalString(arguments, "name") ?? string.Empty,
+        };
+        if (name.Length == 0)
+        {
+            throw new ArgumentException("The 'name' value cannot be empty.");
         }
 
         string? returnType = GetOptionalString(arguments, "returnType");

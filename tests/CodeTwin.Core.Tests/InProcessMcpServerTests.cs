@@ -180,6 +180,30 @@ public sealed class InProcessMcpServerTests
         });
         Assert.True(unexpected.GetProperty("result").GetProperty("isError").GetBoolean());
         Assert.Contains("Not supported.", unexpected.GetProperty("result").GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
+
+        automation.CreateFailure = null;
+        JsonElement getter = await SendAsync(client, 8, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", kind = "propertyGet", implementation = "Value := _value;" },
+        });
+        Assert.Equal("Demo/TIPC/POUs/Get", getter.GetProperty("result").GetProperty("structuredContent").GetProperty("Path").GetString());
+        Assert.Equal(PlcElementKind.PropertyGet, automation.LastCreateRequest?.Kind);
+
+        JsonElement setter = await SendAsync(client, 9, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", name = "Other", kind = "propertySet" },
+        });
+        Assert.Equal("Set", automation.LastCreateRequest?.Name);
+        Assert.False(setter.GetProperty("result").TryGetProperty("isError", out _));
+
+        JsonElement missingName = await SendAsync(client, 10, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", kind = "method" },
+        });
+        Assert.True(missingName.GetProperty("result").GetProperty("isError").GetBoolean());
     }
 
     [Fact]

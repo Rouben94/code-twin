@@ -80,6 +80,8 @@ public enum PlcElementKind
     Function,
     Method,
     Property,
+    PropertyGet,
+    PropertySet,
     Struct,
     Enum,
     GlobalVariableList,
