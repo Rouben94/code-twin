@@ -44,12 +44,12 @@ public sealed class SolutionLocatorTests : IDisposable
     }
 
     [Fact]
-    public void RejectsFoldersWithoutTwinCatSolution()
+    public void ReturnsNullForFoldersWithoutTwinCatSolution()
     {
         string folder = Directory.CreateDirectory(Path.Combine(root, "empty")).FullName;
         File.WriteAllText(Path.Combine(folder, "Other.sln"), "Project(\"{X}\") = \"Lib\", \"Lib\\Lib.csproj\", \"{Y}\"\r\n");
 
-        Assert.Throws<ArgumentException>(() => SolutionLocator.Locate(folder));
+        Assert.Null(SolutionLocator.Locate(folder));
     }
 
     [Fact]

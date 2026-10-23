@@ -11,7 +11,10 @@ internal static class ShellLauncher
     private static readonly TimeSpan StartTimeout = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(1);
 
-    public static async Task<ShellInstance> StartAsync(string solution, string instancesDirectory, CancellationToken cancellationToken)
+    public static async Task<ShellInstance> StartAsync(
+        string solution,
+        Func<CancellationToken, Task<ShellInstance?>> findStarted,
+        CancellationToken cancellationToken)
     {
         Launch(solution);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -21,7 +24,7 @@ internal static class ShellLauncher
             while (true)
             {
                 await Task.Delay(PollInterval, timeout.Token).ConfigureAwait(false);
-                if (await FindWithSolutionAsync(instancesDirectory, solution, timeout.Token).ConfigureAwait(false) is { } shell)
+                if (await findStarted(timeout.Token).ConfigureAwait(false) is { } shell)
                 {
                     return shell;
                 }
@@ -35,19 +38,6 @@ internal static class ShellLauncher
         }
     }
 
-    public static async Task<ShellInstance?> FindWithSolutionAsync(string instancesDirectory, string solution, CancellationToken cancellationToken)
-    {
-        foreach (ShellInstance candidate in ShellDiscovery.GetRunningShells(instancesDirectory))
-        {
-            string? open = await RunningSolutions.GetOpenSolutionAsync(candidate.Pid, cancellationToken).ConfigureAwait(false);
-            if (PathEquals(open, solution))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
-    }
     public static bool PathEquals(string? left, string right) =>
         left is not null && string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
 

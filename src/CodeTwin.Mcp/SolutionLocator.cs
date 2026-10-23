@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 namespace CodeTwin.Mcp;
 
 /// <summary>Finds the TwinCAT solution (.sln that references a .tsproj) for a repository, folder or project file path.</summary>
+/// <remarks>Returns null when an existing path has no TwinCAT solution; throws for invalid paths and ambiguous results.</remarks>
 internal static partial class SolutionLocator
 {
     private const int MaxSearchDepth = 8;
@@ -12,7 +13,7 @@ internal static partial class SolutionLocator
         "bin", "obj", "node_modules", "_Boot", "_CompileInfo", "_Libraries", "_Deployment",
     };
 
-    public static string Locate(string path)
+    public static string? Locate(string path)
     {
         if (!Path.IsPathFullyQualified(path))
         {
@@ -42,10 +43,10 @@ internal static partial class SolutionLocator
         throw new ArgumentException($"'{fullPath}' does not exist.");
     }
 
-    private static string Single(IReadOnlyList<string> solutions, string path) => solutions.Count switch
+    private static string? Single(IReadOnlyList<string> solutions, string path) => solutions.Count switch
     {
         1 => solutions[0],
-        0 => throw new ArgumentException($"No TwinCAT solution (.sln with a .tsproj) found for '{path}'."),
+        0 => null,
         _ => throw new ArgumentException(
             $"Several TwinCAT solutions found for '{path}': {string.Join(", ", solutions)}. Call initialize again with the .sln path."),
     };

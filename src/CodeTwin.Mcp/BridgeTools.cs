@@ -11,9 +11,11 @@ internal sealed class BridgeTools(ShellBridge bridge)
     public const string InitializeToolName = "initialize";
 
     public const string Instructions =
-        "Call initialize first with the absolute path of the repository, folder, .sln, .tsproj or .plcproj you work on. "
+        "Call initialize first with the absolute path of the repository, folder, .sln, .tsproj or .plcproj you work on "
+        + "(the current working directory if the user named none). "
         + "It finds the TwinCAT solution and connects to the TwinCAT XAE Shell that has it open, or starts one with it. "
-        + "Then use the plc_* tools; they act on that solution.";
+        + "If that path has no TwinCAT solution, it connects to the only shell with a solution open. "
+        + "Then use the plc_* tools; they act on that solution and fail until initialize succeeded.";
 
     private static readonly JsonSerializerOptions Json = McpJsonUtilities.DefaultOptions;
 
@@ -73,7 +75,8 @@ internal sealed class BridgeTools(ShellBridge bridge)
             Name = InitializeToolName,
             Description = "Connect this session to the TwinCAT project at an absolute path (repository, folder, .sln, .tsproj or .plcproj). "
                 + "Finds the TwinCAT solution, uses the running TwinCAT XAE Shell that has it open, or starts TcXaeShell with it "
-                + "(this can take a few minutes). Call it before the plc_* tools and whenever you switch projects.",
+                + "(this can take a few minutes). If the path has no TwinCAT solution, connects to the only shell that has a solution open. "
+                + "Call it before the plc_* tools (they fail until it succeeded) and whenever you switch projects.",
             InputSchema = JsonSerializer.SerializeToElement(new
             {
                 type = "object",
