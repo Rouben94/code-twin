@@ -24,7 +24,7 @@ description: Diagnose and fix TwinCAT 3 PLC compiler errors and warnings (Cxxxx 
 | C0027 | Size of string expected | `STRING()` without a length. |
 | C0032 | Type 'A' cannot be converted to 'B' | Incompatible assignment; use an explicit conversion (`TO_INT`, `LREAL_TO_DINT`, ...) or fix the types. |
 | C0035 | Program name, function or FB instance expected | Calling something that is not callable, or a misspelled call. |
-| C0046 | Identifier 'x' not defined | Undeclared variable; missing namespace for `qualified_only` enums or GVLs (`E_State.Idle`, `GVL_X.nVar`); missing library reference. |
+| C0046 | Identifier 'x' not defined | Undeclared variable; missing namespace for `qualified_only` enums or GVLs (`E_State.Idle`, `GVL_X.someVar`); missing library reference. |
 | C0076 | Unexpected structure initialization | Struct initializer `(a := 1)` on a non-struct type, or syntax error inside it. |
 | C0077 | Unknown type: 'x' | Typo in a type name, DUT not created yet, or the type lives in a library that is not referenced. |
 | C0195 | Implicit conversion from signed to unsigned (warning) | Mixed signed/unsigned arithmetic; convert explicitly. |

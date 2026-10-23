@@ -18,9 +18,9 @@ Reference: InfoSys "PLC Library: Tc2_MC2" (https://infosys.beckhoff.com/content/
 
 ## Axis reference
 
-- One `AXIS_REF` per axis (e.g. `stAxis : AXIS_REF;` in an axis FB or GVL), linked to the NC axis in the System Manager (user action).
-- Call `stAxis.ReadStatus();` once per cycle **before** the motion blocks so `stAxis.Status` (e.g. `Status.Moving`, `Status.Error`, `Status.ErrorID`, `Status.Homed`) is current.
-- Pass the axis to every block as `Axis := stAxis`.
+- One `AXIS_REF` per axis (e.g. `axis : AXIS_REF;` in an axis FB or GVL), linked to the NC axis in the System Manager (user action).
+- Call `axis.ReadStatus();` once per cycle **before** the motion blocks so `axis.Status` (e.g. `Status.Moving`, `Status.Error`, `Status.ErrorID`, `Status.Homed`) is current.
+- Pass the axis to every block as `Axis := axis`.
 
 ## Core blocks
 
@@ -44,11 +44,11 @@ All `Execute` blocks start on a **rising edge** and report `Busy`, `Done` (or `I
 - Keep `Execute` `TRUE` until `Done`, `Error` or `CommandAborted`, then set it `FALSE` for at least one cycle before the next command.
 - Use one instance per command type per axis; don't share an instance between states that may overlap.
 - `CommandAborted` is normal when another command takes over (e.g. halt during move); handle it explicitly.
-- Read `ErrorID` from the block **and** `stAxis.Status.ErrorID`; report both. Look up NC error codes in InfoSys ("NC error codes").
+- Read `ErrorID` from the block **and** `axis.Status.ErrorID`; report both. Look up NC error codes in InfoSys ("NC error codes").
 - `BufferMode` (`MC_Aborting` default, `MC_Buffered`, `MC_BlendingLow`, ...) chains moves without stopping; only use it when the sequence needs it.
 
 ## Axis FB pattern
 
-Wrap each axis in an FB (`FB_Axis`) that owns `MC_Power`, `MC_Reset`, `MC_Home`, the move blocks and `MC_Halt`, calls `ReadStatus`, and exposes commands as methods (`Enable`, `Home`, `MoveAbs(fPos, fVelo)`, `Halt`, `Reset`) plus status properties (`bReady`, `bBusy`, `bError`, `nErrorId`, `fActPosition`). The FB body runs a state machine (`E_AxisState`: `Disabled`, `Standstill`, `Homing`, `Moving`, `Stopping`, `Error`). Machine sequences command the FB, never the MC blocks directly.
+Wrap each axis in an FB (`FB_Axis`) that owns `MC_Power`, `MC_Reset`, `MC_Home`, the move blocks and `MC_Halt`, calls `ReadStatus`, and exposes commands as methods (`Enable`, `Home`, `MoveAbs(position, velocity)`, `Halt`, `Reset`) plus status properties (`Ready`, `Busy`, `Error`, `ErrorId`, `ActPosition`). The FB body runs a state machine (`E_AxisState`: `Disabled`, `Standstill`, `Homing`, `Moving`, `Stopping`, `Error`). Machine sequences command the FB, never the MC blocks directly.
 
 Use `LREAL` for positions and velocities, and units from the NC axis scaling (usually mm, mm/s, deg).

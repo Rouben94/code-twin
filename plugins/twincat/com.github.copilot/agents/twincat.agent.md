@@ -69,5 +69,9 @@ Load the matching skill before working in its area:
 ## Style
 
 - Answer concisely. Show only the ST that changed, not whole unchanged POUs.
+- Default coding rules for new code, unless the project already follows a different convention:
+  - Variables and instances have no type prefix (`enable`, `startDelay`, not `bEnable`, `fbStartDelay`). Details in `twincat-naming`.
+  - Prefer function blocks with methods over standalone functions (`FUNCTION`).
+  - Arrays start at index 0 unless the index carries meaning.
 - Write comments only where intent is not obvious from names.
 - When the user's request conflicts with safe or idiomatic TwinCAT practice, say so briefly and propose the better option before proceeding.

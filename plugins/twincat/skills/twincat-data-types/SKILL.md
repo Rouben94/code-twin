@@ -26,7 +26,7 @@ Rules:
 
 - Choose the smallest type that fits the **range with margin**, not the smallest that fits today's value. Counters that may run for months: `UDINT` or `ULINT`.
 - Signed/unsigned mixing triggers implicit conversions; keep a calculation in one type and convert explicitly.
-- Compare floating point with a tolerance: `ABS(fA - fB) < cEpsilon`, never `=`.
+- Compare floating point with a tolerance: `ABS(a - b) < EPSILON`, never `=`.
 - Standard string functions (`CONCAT`, `LEFT`, `MID`, `FIND`, ...) work on `STRING` up to 255 characters. For longer text see `Tc2_Utilities` in InfoSys. Building strings every cycle costs CPU; do it on change.
 
 ## User-defined types (DUTs)
@@ -39,22 +39,22 @@ END_TYPE
 
 TYPE ST_RecipeStep :
 STRUCT
-    fTargetPos : LREAL;
-    tDwell     : TIME := T#500MS;
-    bEnabled   : BOOL;
+    targetPos : LREAL;
+    dwell     : TIME := T#500MS;
+    enabled   : BOOL;
 END_STRUCT
 END_TYPE
 
 TYPE ST_Extended EXTENDS ST_RecipeStep :
 STRUCT
-    nRetries : UINT;
+    retries : UINT;
 END_STRUCT
 END_TYPE
 
 TYPE U_Register :
 UNION
-    nWord  : WORD;
-    aBytes : ARRAY[0..1] OF BYTE;
+    raw   : WORD;
+    bytes : ARRAY[0..1] OF BYTE;
 END_UNION
 END_TYPE
 
@@ -65,8 +65,8 @@ Create DUTs with `plc_create_element` (`kind`: `struct`, `enum`), then write the
 
 ## Arrays
 
-- Any bounds: `ARRAY[1..10] OF INT`, `ARRAY[0..cMax - 1] OF ST_Step`, multi-dimensional `ARRAY[1..3, 1..4] OF LREAL`. Use named constants for bounds and loop limits.
-- Variable-length arrays `ARRAY[*] OF T` are allowed only in `VAR_IN_OUT` of functions, methods and FBs; get limits with `LOWER_BOUND(aX, 1)` / `UPPER_BOUND(aX, 1)`.
+- Start arrays at index 0 by default: `ARRAY[0..MAX_STEPS - 1] OF ST_Step`, looped with `FOR idx := 0 TO MAX_STEPS - 1`. Use another lower bound only when the index carries meaning (for example `ARRAY[1..4] OF ST_Station` for station numbers 1 to 4) or the existing code does. Multi-dimensional: `ARRAY[0..2, 0..3] OF LREAL`. Use named constants for bounds and loop limits.
+- Variable-length arrays `ARRAY[*] OF T` are allowed only in `VAR_IN_OUT` of functions, methods and FBs; get limits with `LOWER_BOUND(values, 1)` / `UPPER_BOUND(values, 1)`.
 - Out-of-range writes silently corrupt neighbouring memory. During development add the implicit check function `CheckBounds` (Add Object > POUs for implicit checks) and remove or keep it consciously.
 
 ## Pointers and references
@@ -74,7 +74,7 @@ Create DUTs with `plc_create_element` (`kind`: `struct`, `enum`), then write the
 - Prefer `REFERENCE TO T` (non-null alias, `REF=`, `__ISVALIDREF`) over `POINTER TO T`.
 - Pointers: typed (`POINTER TO ST_X`), assigned with `ADR()`, dereferenced with `^`, checked against `0`. No `DWORD` pointers.
 - Avoid pointer arithmetic; if needed, stay inside one array.
-- `MEMCPY`, `MEMSET`, `MEMCMP` (Tc2_System) need the exact `SIZEOF` of the destination. Prefer plain assignment (`stA := stB;`, `aA := aB;` for same types).
+- `MEMCPY`, `MEMSET`, `MEMCMP` (Tc2_System) need the exact `SIZEOF` of the destination. Prefer plain assignment (`recipeA := recipeB;` for same types).
 
 ## Memory model
 

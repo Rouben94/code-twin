@@ -30,19 +30,18 @@ AddsNegativeNumber();
 ```st
 METHOD PRIVATE AddsTwoPositiveNumbers
 VAR
-    fbCalc : FB_Calculator;
+    calculator : FB_Calculator;
 END_VAR
 // implementation
 TEST('AddsTwoPositiveNumbers');
-fbCalc(nA := 2, nB := 3);
-AssertEquals_INT(Expected := 5, Actual := fbCalc.nSum, Message := 'Sum of 2 and 3');
+AssertEquals_INT(Expected := 5, Actual := calculator.Add(a := 2, b := 3), Message := 'Sum of 2 and 3');
 TEST_FINISHED();
 ```
 
 ```st
 PROGRAM PRG_Test
 VAR
-    fbCalculatorTest : FB_Calculator_Test;
+    calculatorTest : FB_Calculator_Test;
 END_VAR
 // implementation
 TcUnit.RUN();

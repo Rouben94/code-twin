@@ -19,56 +19,56 @@ Look up anything not covered here in InfoSys ("TwinCAT 3 PLC > Reference Program
 ```st
 FUNCTION_BLOCK FB_Valve EXTENDS FB_Base IMPLEMENTS I_Valve
 VAR_INPUT
-    bOpen       : BOOL;
-    tTimeout    : TIME := T#2S;
+    open        : BOOL;
+    timeout     : TIME := T#2S;
 END_VAR
 VAR_OUTPUT
-    bError      : BOOL;
+    error       : BOOL;
 END_VAR
 VAR_IN_OUT
-    stConfig    : ST_ValveConfig;    // passed by reference, must be connected
+    config      : ST_ValveConfig;    // passed by reference, must be connected
 END_VAR
 VAR
-    fbTimeout   : TON;
+    timeoutTimer : TON;
 END_VAR
 VAR CONSTANT
-    cMaxRetries : UINT := 3;
+    MAX_RETRIES : UINT := 3;
 END_VAR
 ```
 
-Sections: `VAR_INPUT`, `VAR_OUTPUT`, `VAR_IN_OUT`, `VAR_IN_OUT CONSTANT`, `VAR`, `VAR_TEMP`, `VAR_INST` (methods), `VAR_STAT`, `VAR CONSTANT`, `VAR_GLOBAL`, `VAR PERSISTENT`, `VAR RETAIN`. Initial values with `:=`. Mapped I/O: `bSensor AT %I* : BOOL;` / `bLamp AT %Q* : BOOL;`.
+Sections: `VAR_INPUT`, `VAR_OUTPUT`, `VAR_IN_OUT`, `VAR_IN_OUT CONSTANT`, `VAR`, `VAR_TEMP`, `VAR_INST` (methods), `VAR_STAT`, `VAR CONSTANT`, `VAR_GLOBAL`, `VAR PERSISTENT`, `VAR RETAIN`. Initial values with `:=`. Mapped I/O: `sensor AT %I* : BOOL;` / `lamp AT %Q* : BOOL;`. Variable names carry no type prefix; see `twincat-naming`.
 
-Functions declare their return type in the header (`FUNCTION F_Scale : LREAL`) and return by assigning to the function name (`F_Scale := fIn * fFactor;`) or with `RETURN`. Methods and property getters work the same way.
+Methods declare their return type in the header (`METHOD Scale : LREAL`) and return by assigning to the method name (`Scale := value * factor;`) or with `RETURN`. Property getters work the same way. Prefer methods on an FB over standalone functions (see `twincat-oop`).
 
 ## Statements
 
 ```st
-IF bStart AND NOT bError THEN
-    eState := E_State.Running;
-ELSIF bStop THEN
-    eState := E_State.Stopping;
+IF start AND NOT error THEN
+    state := E_State.Running;
+ELSIF stop THEN
+    state := E_State.Stopping;
 ELSE
     ;
 END_IF
 
-CASE eState OF
+CASE state OF
     E_State.Idle:
         ...
     E_State.Running, E_State.Paused:
         ...
 ELSE
-    eState := E_State.Error;
+    state := E_State.Error;
 END_CASE
 
-FOR nIdx := 1 TO cMaxSteps BY 1 DO
-    IF aSteps[nIdx].bDone THEN
+FOR idx := 0 TO MAX_STEPS - 1 BY 1 DO
+    IF steps[idx].done THEN
         CONTINUE;
     END_IF
     ...
 END_FOR
 
-WHILE nCount < 10 DO nCount := nCount + 1; END_WHILE
-REPEAT nCount := nCount - 1; UNTIL nCount = 0 END_REPEAT
+WHILE count < 10 DO count := count + 1; END_WHILE
+REPEAT count := count - 1; UNTIL count = 0 END_REPEAT
 ```
 
 - Statements end with `;`. `EXIT` leaves a loop, `CONTINUE` skips to the next iteration, `RETURN` leaves the POU.
@@ -80,8 +80,8 @@ REPEAT nCount := nCount - 1; UNTIL nCount = 0 END_REPEAT
 | Operator | Meaning |
 | --- | --- |
 | `:=` | assignment |
-| `=>` | output assignment in a call (`fbTimer(IN := b, Q => bDone);`) |
-| `REF=` | assign a reference (`refAxis REF= stAxis;`) |
+| `=>` | output assignment in a call (`timer(IN := start, Q => done);`) |
+| `REF=` | assign a reference (`axisRef REF= axis;`) |
 | `S=` / `R=` | set / reset a BOOL |
 | `=`, `<>`, `<`, `<=`, `>`, `>=` | comparison |
 | `+ - * /`, `MOD` | arithmetic (integer `/` truncates) |
@@ -90,7 +90,7 @@ REPEAT nCount := nCount - 1; UNTIL nCount = 0 END_REPEAT
 | `^` | dereference a pointer |
 | `ADR()`, `SIZEOF()` | address, size in bytes |
 
-Power is `EXPT(base, exp)`. Bit access: `nWord.3`. Integer overflow wraps silently; integer division by zero raises an exception and stops the PLC, so guard divisors.
+Power is `EXPT(base, exp)`. Bit access: `statusWord.3`. Integer overflow wraps silently; integer division by zero raises an exception and stops the PLC, so guard divisors.
 
 ## Literals
 
@@ -98,14 +98,14 @@ Power is `EXPT(base, exp)`. Bit access: `nWord.3`. Integer overflow wraps silent
 
 ## Calls
 
-- Functions: `nSum := F_Add(nA := 1, nB := 2);` (named) or `F_Add(1, 2)` (positional, in declaration order). Prefer named arguments.
-- Function blocks: call the instance, then read outputs: `fbDelay(IN := bStart, PT := T#2S); IF fbDelay.Q THEN ...`.
-- Methods and properties: `fbValve.Open();`, `fbValve.bIsOpen`. Enum values qualified: `E_State.Running`.
+- Function blocks: call the instance, then read outputs: `startDelay(IN := start, PT := T#2S); IF startDelay.Q THEN ...`.
+- Methods and properties: `valve.Open();`, `sum := calculator.Add(a := 1, b := 2);`, `valve.IsOpen`. Prefer named arguments. Enum values qualified: `E_State.Running`.
+- Functions (only in existing code or library calls): `sum := F_Add(a := 1, b := 2);`.
 - `THIS^` is the current instance, `SUPER^` the base implementation (`SUPER^.Reset();`).
 
 ## Type conversion
 
-Convert explicitly: `TO_LREAL(nCounts)`, `INT_TO_REAL(n)`, `LREAL_TO_DINT(f)`. Float-to-integer conversions round to nearest; use `TRUNC` to truncate. Narrowing conversions can overflow silently, so range-check first. Implicit narrowing produces compiler warnings; don't ignore them.
+Convert explicitly: `TO_LREAL(counts)`, `INT_TO_REAL(value)`, `LREAL_TO_DINT(position)`. Float-to-integer conversions round to nearest; use `TRUNC` to truncate. Narrowing conversions can overflow silently, so range-check first. Implicit narrowing produces compiler warnings; don't ignore them.
 
 ## Pragmas and attributes
 
