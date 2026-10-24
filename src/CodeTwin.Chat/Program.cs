@@ -39,6 +39,16 @@ catch (Exception exception)
 
 channel.Ready();
 
+try
+{
+    await host.PublishModelsAsync(CancellationToken.None);
+    await host.PublishQuotaAsync(CancellationToken.None);
+}
+catch (Exception exception)
+{
+    await Console.Error.WriteLineAsync($"Reading the Copilot models or quota failed: {exception.Message}");
+}
+
 using StreamReader input = new(Console.OpenStandardInput(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 while (await input.ReadLineAsync() is { } line)
 {
@@ -80,6 +90,19 @@ async Task HandleAsync(string line)
             break;
         case "permission":
             host.ResolvePermission(command.GetProperty("id").GetString() ?? string.Empty, command.GetProperty("approved").GetBoolean());
+            break;
+        case "plan":
+            host.ResolvePlan(
+                command.GetProperty("id").GetString() ?? string.Empty,
+                command.GetProperty("approved").GetBoolean(),
+                GetOptionalString(command, "action"),
+                GetOptionalString(command, "feedback"));
+            break;
+        case "setModel":
+            await host.SetModelAsync(GetOptionalString(command, "model"), GetOptionalString(command, "effort"), CancellationToken.None);
+            break;
+        case "setMode":
+            await host.SetModeAsync(GetOptionalString(command, "mode"), CancellationToken.None);
             break;
     }
 }

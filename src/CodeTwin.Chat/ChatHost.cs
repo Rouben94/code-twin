@@ -19,12 +19,76 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
     });
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> pendingPermissions = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<ExitPlanModeResult>> pendingPlans = new(StringComparer.Ordinal);
     private CopilotSession? session;
     private IDisposable? subscription;
     private string? sessionSolution;
+    private string? model;
+    private string? reasoningEffort;
+    private SessionMode mode = SessionMode.Interactive;
     private int permissionCounter;
 
     public Task StartAsync(CancellationToken cancellationToken) => client.StartAsync(cancellationToken);
+
+    public async Task PublishModelsAsync(CancellationToken cancellationToken)
+    {
+        IList<ModelInfo> models = await client.ListModelsAsync(cancellationToken).ConfigureAwait(false);
+        channel.Send(new
+        {
+            type = "models",
+            models = models
+                .Where(info => info.Policy?.State is null or "enabled")
+                .Select(info => new
+                {
+                    id = info.Id,
+                    name = info.Name,
+                    multiplier = info.Billing?.Multiplier,
+                    contextWindow = info.Capabilities?.Limits?.MaxContextWindowTokens,
+                    efforts = info.Capabilities?.Supports?.ReasoningEffort == true ? info.SupportedReasoningEfforts : null,
+                    defaultEffort = info.DefaultReasoningEffort,
+                }),
+        });
+    }
+
+#pragma warning disable GHCP001 // The account quota RPC is the only SDK source for the premium request allowance.
+    public async Task PublishQuotaAsync(CancellationToken cancellationToken)
+    {
+        AccountGetQuotaResult result = await client.Rpc.Account.GetQuotaAsync(null, null, cancellationToken).ConfigureAwait(false);
+        KeyValuePair<string, AccountQuotaSnapshot> premium = result.QuotaSnapshots
+            .FirstOrDefault(snapshot => snapshot.Key.Contains("premium", StringComparison.OrdinalIgnoreCase));
+        if (premium.Value is { } quota)
+        {
+            channel.Send(new
+            {
+                type = "quota",
+                used = quota.UsedRequests,
+                entitlement = quota.EntitlementRequests,
+                remainingPercentage = quota.RemainingPercentage,
+                unlimited = quota.IsUnlimitedEntitlement,
+                resetDate = quota.ResetDate,
+            });
+        }
+    }
+#pragma warning restore GHCP001
+
+    public async Task SetModelAsync(string? id, string? effort, CancellationToken cancellationToken)
+    {
+        model = string.IsNullOrEmpty(id) ? null : id;
+        reasoningEffort = string.IsNullOrEmpty(effort) ? null : effort;
+        if (session is not null && model is not null)
+        {
+            await session.SetModelAsync(model, new SetModelOptions { ReasoningEffort = reasoningEffort }, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    public async Task SetModeAsync(string? name, CancellationToken cancellationToken)
+    {
+        mode = ParseMode(name);
+        if (session is not null)
+        {
+            await ApplyModeAsync(session, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     public async Task SendAsync(string prompt, string? solution, string? activeElement, CancellationToken cancellationToken)
     {
@@ -65,6 +129,14 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         }
     }
 
+    public void ResolvePlan(string id, bool approved, string? action, string? feedback)
+    {
+        if (pendingPlans.TryRemove(id, out TaskCompletionSource<ExitPlanModeResult>? decision))
+        {
+            decision.TrySetResult(new ExitPlanModeResult { Approved = approved, SelectedAction = action, Feedback = feedback });
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         RejectPendingPermissions();
@@ -82,6 +154,8 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
                 ClientName = "CodeTwin",
                 WorkingDirectory = string.IsNullOrEmpty(solution) ? null : Path.GetDirectoryName(solution),
                 Agent = AgentName,
+                Model = model,
+                ReasoningEffort = reasoningEffort,
                 AgentDirectories = [options.AgentsDirectory],
                 SkillDirectories = [options.SkillsDirectory],
                 McpServers = new Dictionary<string, McpServerConfig>(StringComparer.Ordinal)
@@ -96,12 +170,17 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
                 SystemMessage = new SystemMessageConfig { Mode = SystemMessageMode.Append, Content = ChatContext.CreateSystemMessage(solution) },
                 Streaming = true,
                 OnPermissionRequest = DecidePermissionAsync,
+                OnExitPlanModeRequest = DecidePlanAsync,
             },
             cancellationToken).ConfigureAwait(false);
 
         sessionSolution = solution;
         subscription = session.On<SessionEvent>(Forward);
         channel.Send(new { type = "session", solution });
+        if (mode != SessionMode.Interactive)
+        {
+            await ApplyModeAsync(session, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async Task CloseSessionAsync()
@@ -136,10 +215,73 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
             case SessionErrorEvent error:
                 channel.Error(error.Data.Message);
                 break;
+            case SessionModelChangeEvent change:
+                channel.Send(new { type = "model", id = change.Data.NewModel, effort = change.Data.ReasoningEffort });
+                break;
+            case SessionModeChangedEvent change:
+                mode = ParseMode(change.Data.NewMode.Value);
+                channel.Send(new { type = "mode", mode = change.Data.NewMode.Value });
+                break;
+            case SessionUsageInfoEvent usage:
+                channel.Send(new { type = "contextWindow", current = usage.Data.CurrentTokens, limit = usage.Data.TokenLimit });
+                break;
+            case AssistantUsageEvent usage:
+                channel.Send(new
+                {
+                    type = "usage",
+                    model = usage.Data.Model,
+                    input = usage.Data.InputTokens,
+                    output = usage.Data.OutputTokens,
+                    cacheRead = usage.Data.CacheReadTokens,
+                });
+                break;
             case SessionIdleEvent:
                 channel.Send(new { type = "idle" });
+                _ = RefreshQuotaAsync();
                 break;
         }
+    }
+
+    private async Task RefreshQuotaAsync()
+    {
+        try
+        {
+            await PublishQuotaAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            await Console.Error.WriteLineAsync($"Reading the Copilot quota failed: {exception.Message}").ConfigureAwait(false);
+        }
+    }
+
+    private static SessionMode ParseMode(string? name) => name switch
+    {
+        "plan" => SessionMode.Plan,
+        "autopilot" => SessionMode.Autopilot,
+        _ => SessionMode.Interactive,
+    };
+
+    // MessageOptions.AgentMode does not switch the session; the experimental mode RPC is the only way into plan or autopilot mode.
+#pragma warning disable GHCP001
+    private Task ApplyModeAsync(CopilotSession target, CancellationToken cancellationToken) =>
+        target.Rpc.Mode.SetAsync(mode, cancellationToken: cancellationToken);
+#pragma warning restore GHCP001
+
+    private async Task<ExitPlanModeResult> DecidePlanAsync(ExitPlanModeRequest request, ExitPlanModeInvocation invocation)
+    {
+        string id = Interlocked.Increment(ref permissionCounter).ToString(CultureInfo.InvariantCulture);
+        TaskCompletionSource<ExitPlanModeResult> decision = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        pendingPlans[id] = decision;
+        channel.Send(new
+        {
+            type = "plan",
+            id,
+            summary = request.Summary,
+            plan = request.PlanContent,
+            actions = request.Actions,
+            recommended = request.RecommendedAction,
+        });
+        return await decision.Task.ConfigureAwait(false);
     }
 
 #pragma warning disable GHCP001 // PermissionDecision is the SDK's documented opt-in API for custom permission handlers.
@@ -184,6 +326,11 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         foreach (string id in pendingPermissions.Keys)
         {
             ResolvePermission(id, approved: false);
+        }
+
+        foreach (string id in pendingPlans.Keys)
+        {
+            ResolvePlan(id, approved: false, null, null);
         }
     }
 }
