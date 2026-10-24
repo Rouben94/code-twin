@@ -37,18 +37,30 @@
     <form id="composer" class="column">
       <textarea id="prompt" rows="1" placeholder="Ask the twincat agent..." aria-label="Message"></textarea>
       <div class="composer-bar">
-        <div id="status" class="status connecting"><span class="dot"></span><span id="status-text">Starting GitHub Copilot...</span></div>
-        <button id="send" type="submit" title="Send" aria-label="Send">
-          <svg class="send-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3.5M3.5 8 8 3.5 12.5 8"/></svg>
-          <svg class="stop-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
-        </button>
+        <div class="composer-tools">
+          <div id="status" class="status connecting"><span class="dot"></span><span id="status-text">Starting GitHub Copilot...</span></div>
+          <button id="mode" class="chip" type="button" title="Mode (Shift+Tab)" aria-haspopup="menu"><span id="mode-text">Agent</span><svg class="caret" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg></button>
+          <button id="model" class="chip" type="button" title="Model" aria-haspopup="menu"><span id="model-text">Default model</span><svg class="caret" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg></button>
+        </div>
+        <div class="composer-tools">
+          <button id="usage" class="usage" type="button" title="Context and usage" aria-haspopup="dialog">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle class="track" cx="10" cy="10" r="7.5"/><circle id="usage-arc" class="arc" cx="10" cy="10" r="7.5" pathLength="100"/></svg>
+            <span id="usage-text"></span>
+          </button>
+          <button id="send" type="submit" title="Send" aria-label="Send">
+            <svg class="send-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3.5M3.5 8 8 3.5 12.5 8"/></svg>
+            <svg class="stop-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
+          </button>
+        </div>
       </div>
+      <div id="menu" class="menu" role="menu" hidden></div>
     </form>
-    <div class="hint">Enter to send, Shift+Enter for a new line</div>
+    <div class="hint">Enter to send, Shift+Enter for a new line, Shift+Tab to switch mode</div>
   </footer>
   <script src="tick.js"></script>
   <script src="markdown.js"></script>
   <script src="chat.js"></script>
+  <script src="composer-controls.js"></script>
   <script src="tick-walker.js"></script>
 </body>
 </html>

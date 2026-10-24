@@ -59,6 +59,10 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
    - Each prompt carries a `<context>` block with the solution and the active POU.
    - CodeTwin tools and reads are auto-approved; other permission requests are asked in the UI.
      This uses the SDK's experimental permission API (GHCP001).
+   - The composer has a mode picker (Agent, Plan, Autopilot), a model picker with reasoning effort,
+     and a usage ring (context window, token totals, premium requests). Modes use the experimental
+     `session.mode.set` RPC, because `MessageOptions.AgentMode` alone does not switch the session.
+     Quota uses the experimental account quota RPC. Both are GHCP001.
 4. **Generic desktop package** – one global Copilot/Claude plugin = agent + skills + MCP config
    pointing to a generic `code-twin-mcp` bridge. Contains NO repository-specific data.
    The project is resolved at call time from the path the desktop app passes
