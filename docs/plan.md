@@ -63,6 +63,12 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      and a usage ring (context window, token totals, premium requests). Modes use the experimental
      `session.mode.set` RPC, because `MessageOptions.AgentMode` alone does not switch the session.
      Quota uses the experimental account quota RPC. Both are GHCP001.
+   - The usage popover also shows the Copilot plan and its reset date (experimental account auth RPC),
+     the AI credits of the current chat (experimental usage metrics RPC), and the account's monthly
+     AI credits. The SDK has no monthly total, so that one figure is read from GitHub's undocumented
+     `copilot_internal/user` endpoint: a deliberate, user-approved exception to the public-interface rule.
+     It uses `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` or `GITHUB_TOKEN`, else `gh auth token` when gh is signed
+     in to the same account as Copilot. Any failure hides the figure; nothing else depends on it.
 4. **Generic desktop package** – one global Copilot/Claude plugin = agent + skills + MCP config
    pointing to a generic `code-twin-mcp` bridge. Contains NO repository-specific data.
    The project is resolved at call time from the path the desktop app passes

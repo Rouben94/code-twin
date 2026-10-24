@@ -42,7 +42,8 @@ The bar under the message box picks the mode and the model, and shows usage:
 
 - **Mode**: Agent (default), Plan (the agent proposes a plan and waits for your approval before it edits) or Autopilot. Shift+Tab cycles the modes.
 - **Model**: every model your Copilot subscription offers, with its premium request multiplier and, where the model supports it, the reasoning effort. Mode, model and effort are remembered.
-- **Usage ring**: how full the context window is. Click it for this chat's token totals and your premium request quota.
+- **Usage ring**: how full the context window is. Click it for your Copilot plan, its reset date, this chat's token totals and AI credits, and your premium request quota.
+  The monthly AI credits total comes from an undocumented GitHub endpoint, so it only shows when a token for your Copilot account is available: `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` or `GITHUB_TOKEN`, or `gh auth login` with the same account. Otherwise it is hidden.
 
 The mascot Tick shows the agent state with its eye LEDs: green (RUN, ready), blinking amber (WARNING, thinking or waiting for you), red (ERROR, request failed). It is drawn from a 17 x 12 pixel grid in `ChatUi/tick.js`; there are no image files. A second Tick lives behind the message box (`ChatUi/tick-walker.js`): now and then it peeks over the edge, strolls along the top, naps, and kneads while you type. It stays off when Windows animations are disabled.
 

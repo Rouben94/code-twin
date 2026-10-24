@@ -35,6 +35,8 @@
   let context = { current: 0, limit: 0 };
   let totals = { input: 0, output: 0, cacheRead: 0, calls: 0 };
   let quota = null;
+  let account = null;
+  let chatCredits = null;
   let openFor = null;
 
   const formatTokens = (value) => {
@@ -197,11 +199,39 @@
     return row;
   };
 
+  const planNames = { free: "Free", individual: "Pro", pro: "Pro", pro_plus: "Pro+", business: "Business", enterprise: "Enterprise" };
+  const formatPlan = (plan) => `Copilot ${planNames[plan] || plan.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}`;
+  const formatCredits = (value) => value.toLocaleString(undefined, { maximumFractionDigits: value < 100 ? 1 : 0 });
+  const formatReset = (value) => {
+    const date = new Date(value);
+    return isNaN(date)
+      ? ""
+      : `Resets ${date.toLocaleDateString(undefined, { month: "short", day: "numeric" })} at ${date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
+  };
+
+  const accountHeader = () => {
+    const header = element("div", "usage-account");
+    const title = header.appendChild(element("div", "usage-account-title"));
+    title.append(element("span", "", account.plan ? formatPlan(account.plan) : "Copilot"));
+    if (account.resetDate) {
+      title.append(element("span", "usage-account-reset", formatReset(account.resetDate)));
+    }
+    if (account.creditsUsed != null) {
+      const total = header.appendChild(element("div", "usage-account-total"));
+      total.append(element("span", "usage-account-number", formatCredits(account.creditsUsed)), element("span", "", "Credits used"));
+    }
+    return header;
+  };
+
   function renderUsagePanel() {
     menu.replaceChildren();
     menu.className = "menu usage-panel";
     const limit = context.limit || findModel(model)?.contextWindow || 0;
     const percent = limit ? Math.min(100, Math.round((context.current / limit) * 100)) : 0;
+
+    if (account) {
+      menu.appendChild(accountHeader());
+    }
 
     menu.appendChild(element("div", "menu-title", "Context window"));
     menu.appendChild(meter(percent));
@@ -212,12 +242,15 @@
     menu.appendChild(usageRow("Cached input", formatTokens(totals.cacheRead)));
     menu.appendChild(usageRow("Output tokens", formatTokens(totals.output)));
     menu.appendChild(usageRow("Model calls", `${totals.calls}`));
+    if (chatCredits != null) {
+      menu.appendChild(usageRow("AI credits", formatCredits(chatCredits)));
+    }
     const current = findModel(model);
     if (current) {
       menu.appendChild(usageRow("Model", `${current.name}${current.multiplier != null ? ` \u00B7 ${formatMultiplier(current.multiplier)}` : ""}`));
     }
 
-    if (quota) {
+    if (quota && !(quota.unlimited && account)) {
       menu.appendChild(element("div", "menu-title", "Premium requests"));
       if (quota.unlimited) {
         menu.appendChild(usageRow("Plan", "Unlimited"));
@@ -234,6 +267,7 @@
   const resetSessionUsage = () => {
     context = { current: 0, limit: 0 };
     totals = { input: 0, output: 0, cacheRead: 0, calls: 0 };
+    chatCredits = null;
     showUsage();
   };
 
@@ -317,6 +351,20 @@
 
   handlers.quota = (snapshot) => {
     quota = snapshot;
+    if (openFor === usageButton) {
+      renderUsagePanel();
+    }
+  };
+
+  handlers.account = (info) => {
+    account = info;
+    if (openFor === usageButton) {
+      renderUsagePanel();
+    }
+  };
+
+  handlers.chatCredits = ({ credits }) => {
+    chatCredits = credits;
     if (openFor === usageButton) {
       renderUsagePanel();
     }
