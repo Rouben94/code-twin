@@ -542,6 +542,51 @@ footer { padding: 0 16px 10px; }
   opacity: 0.8;
 }
 
+/* Tick behind the message box */
+
+#composer { position: relative; }
+
+.tick-stage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 1px);
+  height: 52px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tick-walker {
+  position: absolute;
+  bottom: 0;
+  transition: transform 0.4s ease;
+}
+
+.tick-walker.hop .tick { animation: tick-hop 0.22s ease-out 2; }
+
+.tick-zzz {
+  display: none;
+  position: absolute;
+  top: -14px;
+  color: var(--muted);
+  font: 600 11px/1 var(--mono);
+}
+
+.tick-walker.napping .tick-zzz {
+  display: block;
+  animation: tick-zzz 2s ease-in-out infinite;
+}
+
+@keyframes tick-hop {
+  50% { translate: 0 -4px; }
+}
+
+@keyframes tick-zzz {
+  0% { opacity: 0; translate: 0 6px; }
+  30% { opacity: 1; }
+  100% { opacity: 0; translate: 6px -6px; }
+}
+
 @keyframes rise {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: none; }

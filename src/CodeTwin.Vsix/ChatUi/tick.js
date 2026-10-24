@@ -17,11 +17,13 @@ const TickSprite = (() => {
     "..B.B..B.B.......",
   ];
 
-  const colors = { B: "#4A5361", P: "#E8919A", K: "#8C949F", C: "#C9CED6", G: "#D9A93A" };
+  const colors = { B: "#4A5361", P: "#E8919A", K: "#8C949F", C: "#C9CED6", G: "#D9A93A", closed: "#2B313A" };
   const eyeColors = { run: "#3BD16F", warn: "#F2B33D", error: "#F0524F" };
   const width = grid[0].length;
   const height = grid.length;
   const canvases = new Set();
+  const poses = new WeakMap();
+  const steppingLegs = "...BB...BB.......";
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let state = "run";
@@ -30,12 +32,25 @@ const TickSprite = (() => {
 
   const colorOf = (cell) => (cell === "E" ? (eyesLit ? eyeColors[state] : colors.B) : colors[cell]);
 
+  // Poses are derived from the grid: "step" swaps the leg row, "blink" and "sleep" close the eyes.
+  const cellAt = (pose, x, y) => {
+    if (pose === "step" && y === height - 1) {
+      return steppingLegs[x];
+    }
+    const cell = grid[y][x];
+    if (cell === "E" && (pose === "blink" || pose === "sleep")) {
+      return grid[y + 1][x] === "E" ? "B" : "closed";
+    }
+    return cell;
+  };
+
   const draw = (canvas) => {
     const context = canvas.getContext("2d");
+    const pose = poses.get(canvas);
     context.clearRect(0, 0, width, height);
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
-        const color = colorOf(grid[y][x]);
+        const color = colorOf(cellAt(pose, x, y));
         if (color) {
           context.fillStyle = color;
           context.fillRect(x, y, 1, 1);
@@ -101,7 +116,12 @@ const TickSprite = (() => {
     return lines.join("\n");
   };
 
-  return { create, setState, toText, eyeColor: (name) => eyeColors[name || state], get state() { return state; } };
+  const setPose = (canvas, pose) => {
+    poses.set(canvas, pose);
+    draw(canvas);
+  };
+
+  return { create, setState, setPose, toText, width, height, eyeColor: (name) => eyeColors[name || state], get state() { return state; } };
 })();
 
 function setTickState(state) {
