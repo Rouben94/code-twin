@@ -8,16 +8,45 @@
 </head>
 <body>
   <header>
-    <div id="context" title="">No solution open</div>
-    <button id="new-chat" type="button" title="Start a new conversation">New chat</button>
+    <div id="context" class="pill" title="">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3.5h4l1.5 1.5H14v7.5H2z"/></svg>
+      <span id="context-text">No solution open</span>
+    </div>
+    <button id="new-chat" class="icon-button" type="button" title="New chat" aria-label="New chat">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3H3.5v9.5H13V8"/><path d="M11.5 2.5l2 2L8 10H6V8z"/></svg>
+    </button>
   </header>
   <main id="messages">
-    <div id="status" class="note">Starting GitHub Copilot...</div>
+    <div class="column">
+      <section id="welcome">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 2.5l2.6 6.9 6.9 2.6-6.9 2.6L12 21.5l-2.6-6.9L2.5 12l6.9-2.6z"/></svg>
+        </div>
+        <h1>What should we work on?</h1>
+        <p id="welcome-context">The twincat agent reads, edits and builds the PLC project open in this shell.</p>
+        <div class="suggestions">
+          <button type="button" class="suggestion" data-prompt="Explain what the active POU does and point out possible issues.">Explain the active POU</button>
+          <button type="button" class="suggestion" data-prompt="Build the solution and fix every compile error until the build is clean.">Build and fix errors</button>
+          <button type="button" class="suggestion" data-prompt="Write TcUnit tests for the active POU.">Write TcUnit tests</button>
+        </div>
+      </section>
+      <div id="thread"></div>
+      <div id="typing" class="typing" hidden><span></span><span></span><span></span></div>
+    </div>
   </main>
-  <form id="composer">
-    <textarea id="prompt" rows="3" placeholder="Ask the twincat agent to read, edit, build or fix PLC code (Enter to send, Shift+Enter for a new line)"></textarea>
-    <button id="send" type="submit">Send</button>
-  </form>
+  <footer>
+    <form id="composer" class="column">
+      <textarea id="prompt" rows="1" placeholder="Ask the twincat agent..." aria-label="Message"></textarea>
+      <div class="composer-bar">
+        <div id="status" class="status connecting"><span class="dot"></span><span id="status-text">Starting GitHub Copilot...</span></div>
+        <button id="send" type="submit" title="Send" aria-label="Send">
+          <svg class="send-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3.5M3.5 8 8 3.5 12.5 8"/></svg>
+          <svg class="stop-icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1.5"/></svg>
+        </button>
+      </div>
+    </form>
+    <div class="hint">Enter to send, Shift+Enter for a new line</div>
+  </footer>
   <script src="markdown.js"></script>
   <script src="chat.js"></script>
 </body>

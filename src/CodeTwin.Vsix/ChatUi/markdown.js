@@ -43,14 +43,18 @@ function renderMarkdown(source) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const fence = line.match(/^\s*```/);
+    const fence = line.match(/^\s*```\s*([\w+#-]*)/);
     if (fence) {
       flush();
       const code = [];
       while (++i < lines.length && !/^\s*```/.test(lines[i])) {
         code.push(lines[i]);
       }
-      html.push(`<pre><code>${escape(code.join("\n"))}</code></pre>`);
+      const languages = { iecst: "Structured Text", st: "Structured Text", ps1: "PowerShell", cs: "C#" };
+      const language = escape(languages[fence[1].toLowerCase()] || fence[1] || "text");
+      html.push(
+        `<div class="code"><div class="code-head"><span>${language}</span><button type="button" class="copy">Copy</button></div>` +
+          `<pre><code>${escape(code.join("\n"))}</code></pre></div>`);
       continue;
     }
 
