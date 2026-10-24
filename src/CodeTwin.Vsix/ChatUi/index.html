@@ -19,10 +19,9 @@
   <main id="messages">
     <div class="column">
       <section id="welcome">
-        <div class="mark" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M12 2.5l2.6 6.9 6.9 2.6-6.9 2.6L12 21.5l-2.6-6.9L2.5 12l6.9-2.6z"/></svg>
-        </div>
-        <h1>What should we work on?</h1>
+        <div id="tick-large"></div>
+        <div id="tick-status" class="tick-status"><span class="led">&#9679;</span> <span id="tick-status-text">WARNING &middot; connecting</span></div>
+        <h1>Hi, I'm Tick. What should we work on?</h1>
         <p id="welcome-context">The twincat agent reads, edits and builds the PLC project open in this shell.</p>
         <div class="suggestions">
           <button type="button" class="suggestion" data-prompt="Explain what the active POU does and point out possible issues.">Explain the active POU</button>
@@ -47,6 +46,7 @@
     </form>
     <div class="hint">Enter to send, Shift+Enter for a new line</div>
   </footer>
+  <script src="tick.js"></script>
   <script src="markdown.js"></script>
   <script src="chat.js"></script>
 </body>

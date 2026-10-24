@@ -13,7 +13,11 @@ const contextText = document.getElementById("context-text");
 const composer = document.getElementById("composer");
 const prompt = document.getElementById("prompt");
 const sendButton = document.getElementById("send");
+const tickStatus = document.getElementById("tick-status");
+const tickStatusText = document.getElementById("tick-status-text");
 const tools = new Map();
+
+document.getElementById("tick-large").appendChild(TickSprite.create(7));
 
 const toolLabels = {
   plc_list_elements: "List elements",
@@ -40,8 +44,17 @@ let busy = false;
 let reply = null;
 let replyText = "";
 let activity = null;
+let turnHeadShown = false;
 
 const post = (message) => host.postMessage(JSON.stringify(message));
+
+const tickLabels = { run: "RUN", warn: "WARNING", error: "ERROR" };
+
+const showTick = (state, text) => {
+  setTickState(state);
+  tickStatus.style.color = TickSprite.eyeColor(state);
+  tickStatusText.textContent = `${tickLabels[state]} \u00B7 ${text}`;
+};
 
 const isNearBottom = () => messages.scrollHeight - messages.scrollTop - messages.clientHeight < 80;
 
@@ -95,10 +108,20 @@ const endReply = () => {
   replyText = "";
 };
 
+const ensureTurnHead = () => {
+  if (!turnHeadShown) {
+    turnHeadShown = true;
+    const head = element("div", "turn-head");
+    head.append(TickSprite.create(2), "Tick");
+    append(head);
+  }
+};
+
 const renderReply = (text) => {
   const follow = isNearBottom();
   if (!reply) {
     activity = null;
+    ensureTurnHead();
     reply = append(element("div", "message assistant"));
   }
   replyText = text;
@@ -138,6 +161,7 @@ const summarize = (block) => {
 };
 
 const startActivity = () => {
+  ensureTurnHead();
   const details = element("details", "activity");
   const summary = details.appendChild(element("summary"));
   const icon = summary.appendChild(element("span", "state running"));
@@ -171,6 +195,8 @@ const showTool = ({ id, name, status: toolStatus }) => {
 
 const showPermission = (request) => {
   activity = null;
+  ensureTurnHead();
+  showTick("warn", "waiting for you");
   const card = append(element("div", "permission"));
   card.appendChild(element("div", "title", permissionTitles[request.kind] || `Allow ${request.kind}?`));
   if (request.detail) {
@@ -181,6 +207,7 @@ const showPermission = (request) => {
   const deny = actions.appendChild(element("button", "button", "Deny"));
   const answer = (approved) => {
     post({ type: "permission", id: request.id, approved });
+    showTick("warn", "thinking");
     card.className = "answered";
     card.replaceChildren(`${approved ? "Allowed" : "Denied"}: ${request.detail || request.kind}`);
   };
@@ -205,6 +232,9 @@ const handlers = {
   ready: () => {
     ready = true;
     setStatus("online", "twincat agent");
+    if (!busy) {
+      showTick("run", "ready");
+    }
   },
   session: () => {
     if (thread.querySelector(".message.assistant")) {
@@ -226,11 +256,15 @@ const handlers = {
     endReply();
     activity = null;
     setBusy(false);
+    if (TickSprite.state !== "error") {
+      showTick("run", "ready");
+    }
   },
   error: ({ text }) => {
     if (!ready) {
       setStatus("offline", "Copilot not connected");
     }
+    showTick("error", ready ? "request failed" : "not connected");
     showError(text);
     setBusy(false);
   },
@@ -265,11 +299,13 @@ composer.addEventListener("submit", (event) => {
 
   endReply();
   activity = null;
+  turnHeadShown = false;
   append(element("div", "message user", text));
   messages.scrollTop = messages.scrollHeight;
   prompt.value = "";
   autosize();
   setBusy(true);
+  showTick("warn", "thinking");
   post({ type: "send", prompt: text });
 });
 
@@ -312,11 +348,13 @@ document.getElementById("new-chat").addEventListener("click", () => {
   endReply();
   activity = null;
   setBusy(false);
+  showTick(ready ? "run" : "warn", ready ? "ready" : "connecting");
   prompt.focus();
 });
 
 window.addEventListener("focus", () => post({ type: "getContext" }));
 
 setBusy(false);
+showTick("warn", "connecting");
 prompt.focus();
 post({ type: "ready" });

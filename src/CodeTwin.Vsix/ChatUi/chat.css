@@ -135,25 +135,31 @@ header {
 
 #welcome[hidden] { display: none; }
 
-.mark {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent);
+.tick {
+  display: block;
+  flex: none;
+  image-rendering: pixelated;
 }
 
-.mark svg {
-  width: 24px;
-  height: 24px;
-  fill: currentColor;
-  stroke: none;
+.tick-status {
+  margin-top: 12px;
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  transition: color 0.2s;
+}
+
+.turn-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 #welcome h1 {
-  margin: 16px 0 4px;
+  margin: 12px 0 4px;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 26px;
   font-weight: 400;

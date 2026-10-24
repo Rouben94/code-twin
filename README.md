@@ -38,6 +38,8 @@ The window hosts a WebView2 page (`src/CodeTwin.Vsix/ChatUi`) and starts the sid
 
 CodeTwin tool calls and file reads run without asking. Anything else, such as the PowerShell script of the InfoSys search, shell commands, file writes or URLs, shows an Allow/Deny card in the chat. **New chat** starts a fresh session. The sidecar starts when the window opens and stops with the shell.
 
+The mascot Tick shows the agent state with its eye LEDs: green (RUN, ready), blinking amber (WARNING, thinking or waiting for you), red (ERROR, request failed). It is drawn from a 17 x 12 pixel grid in `ChatUi/tick.js`; there are no image files.
+
 ## TwinCAT agent plugin
 
 `plugins/twincat` is a Copilot CLI plugin with a `twincat` agent and skills for TwinCAT 3 PLC work: InfoSys search, naming, ST syntax, OOP and patterns, data types and memory, compiler errors, TcUnit and motion. The agent looks things up on Beckhoff InfoSys first (live search), then the web, and edits PLC code only through the CodeTwin MCP server. It never performs online actions (activate, login, download).
