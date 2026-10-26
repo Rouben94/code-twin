@@ -29,6 +29,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
     private string? model;
     private string? reasoningEffort;
     private SessionMode mode = SessionMode.Interactive;
+    private volatile bool approveAll;
     private bool privateChat;
     private int permissionCounter;
 
@@ -140,6 +141,9 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
             await ApplyModeAsync(session, cancellationToken).ConfigureAwait(false);
         }
     }
+
+    public void SetToolPermissions(string? name) =>
+        approveAll = string.Equals(name, "approveAll", StringComparison.Ordinal);
 
     public async Task SendAsync(string prompt, string? solution, string? activeElement, CancellationToken cancellationToken)
     {
@@ -475,7 +479,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
 #pragma warning disable GHCP001 // PermissionDecision is the SDK's documented opt-in API for custom permission handlers.
     private async Task<PermissionDecision> DecidePermissionAsync(PermissionRequest request, PermissionInvocation invocation)
     {
-        if (IsTrusted(request))
+        if (approveAll || IsTrusted(request))
         {
             return PermissionDecision.ApproveOnce();
         }

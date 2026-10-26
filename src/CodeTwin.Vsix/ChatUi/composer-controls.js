@@ -12,9 +12,14 @@
   const menu = document.getElementById("menu");
 
   const modes = [
-    { id: "interactive", label: "Agent", detail: "Works step by step and asks before shell commands or file writes" },
+    { id: "interactive", label: "Agent", detail: "Works step by step with you" },
     { id: "plan", label: "Plan", detail: "Drafts a plan first and changes nothing until you approve it" },
     { id: "autopilot", label: "Autopilot", detail: "Keeps working on its own until the task is done" },
+  ];
+
+  const permissionLevels = [
+    { id: "ask", label: "Always ask", detail: "Asks before shell commands, file edits and web access. Reads and CodeTwin tools run directly." },
+    { id: "approveAll", label: "Approve all", detail: "Runs all tools without asking." },
   ];
 
   const planActions = {
@@ -30,6 +35,7 @@
 
   let models = [];
   let mode = modes.some((m) => m.id === storage.get("mode")) ? storage.get("mode") : "interactive";
+  let permissions = permissionLevels.some((p) => p.id === storage.get("permissions")) ? storage.get("permissions") : "ask";
   let model = storage.get("model");
   let effort = storage.get("effort");
   let context = { current: 0, limit: 0 };
@@ -52,9 +58,11 @@
 
   const showMode = () => {
     const current = modes.find((m) => m.id === mode);
+    const level = permissionLevels.find((p) => p.id === permissions);
     modeText.textContent = current.label;
     modeButton.dataset.mode = mode;
-    modeButton.title = `${current.label}: ${current.detail} (Shift+Tab to switch)`;
+    modeButton.dataset.permissions = permissions;
+    modeButton.title = `${current.label}: ${current.detail}. Tool permissions: ${level.label} (Shift+Tab to switch mode)`;
   };
 
   const showModel = () => {
@@ -78,6 +86,7 @@
 
   const applyPreferences = () => {
     post({ type: "setMode", mode });
+    post({ type: "setPermissions", permissions });
     if (model && findModel(model)) {
       post({ type: "setModel", model, effort });
     }
@@ -142,12 +151,41 @@
     post({ type: "setModel", model, effort });
   };
 
+  const setPermissions = (id) => {
+    permissions = id;
+    storage.set("permissions", permissions);
+    showMode();
+    post({ type: "setPermissions", permissions });
+  };
+
   const renderModeMenu = () => {
     menu.className = "menu";
     menu.appendChild(element("div", "menu-title", "Mode"));
     for (const m of modes) {
       menu.appendChild(menuItem(m.label, m.detail, "", m.id === mode, () => {
         setMode(m.id);
+        closeMenu();
+        prompt.focus();
+      }));
+    }
+    menu.appendChild(element("div", "menu-separator"));
+    const level = permissionLevels.find((p) => p.id === permissions);
+    const submenu = menu.appendChild(menuItem("Tool permissions", "", `${level.label} \u203A`, false, () => {
+      menu.replaceChildren();
+      renderPermissionMenu();
+      menu.querySelector("[aria-checked='true']")?.focus();
+    }));
+    submenu.setAttribute("role", "menuitem");
+    submenu.setAttribute("aria-haspopup", "menu");
+    submenu.removeAttribute("aria-checked");
+  };
+
+  const renderPermissionMenu = () => {
+    menu.className = "menu";
+    menu.appendChild(element("div", "menu-title", "Tool permissions"));
+    for (const p of permissionLevels) {
+      menu.appendChild(menuItem(p.label, p.detail, "", p.id === permissions, () => {
+        setPermissions(p.id);
         closeMenu();
         prompt.focus();
       }));

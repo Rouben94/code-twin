@@ -689,6 +689,8 @@ footer { padding: 0 16px 10px; }
 .menu-detail { color: var(--muted); font-size: 12px; }
 .menu-meta { flex: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .menu-empty { padding: 6px 8px; color: var(--muted); font-size: 12px; }
+.menu-separator { height: 1px; margin: 6px 4px; background: var(--hairline); }
+.menu-item[aria-haspopup] { align-items: center; }
 
 .segments {
   display: flex;

@@ -115,6 +115,9 @@ async Task HandleAsync(string line)
         case "setMode":
             await host.SetModeAsync(GetOptionalString(command, "mode"), CancellationToken.None);
             break;
+        case "setPermissions":
+            host.SetToolPermissions(GetOptionalString(command, "permissions"));
+            break;
     }
 }
 
