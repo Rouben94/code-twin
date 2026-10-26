@@ -17,8 +17,13 @@ const TickSprite = (() => {
     "..B.B..B.B.......",
   ];
 
-  const colors = { B: "#4A5361", P: "#E8919A", K: "#8C949F", C: "#C9CED6", G: "#D9A93A", closed: "#2B313A" };
+  const colors = { B: "#4A5361", P: "#E8919A", K: "#8C949F", C: "#C9CED6", G: "#D9A93A", closed: "#2B313A", F: "#101317", L: "#1F242C", H: "#A9B6C6" };
   const eyeColors = { run: "#3BD16F", warn: "#F2B33D", error: "#F0524F" };
+  // Sunglasses for private chats: F frame, L lens, H glint; E keeps a tiny LED reflection so the state stays visible.
+  const shades = {
+    4: ".FHLFFHLF........",
+    5: "..LE..LE.........",
+  };
   const width = grid[0].length;
   const height = grid.length;
   const canvases = new Set();
@@ -29,13 +34,18 @@ const TickSprite = (() => {
   let state = "run";
   let eyesLit = true;
   let blinkTimer = 0;
+  let wearingShades = false;
 
-  const colorOf = (cell) => (cell === "E" ? (eyesLit ? eyeColors[state] : colors.B) : colors[cell]);
+  const colorOf = (cell) => (cell === "E" ? (eyesLit ? eyeColors[state] : wearingShades ? colors.L : colors.B) : colors[cell]);
 
   // Poses are derived from the grid: "step" swaps the leg row, "blink" and "sleep" close the eyes.
   const cellAt = (pose, x, y) => {
     if (pose === "step" && y === height - 1) {
       return steppingLegs[x];
+    }
+    const shade = wearingShades && shades[y] ? shades[y][x] : ".";
+    if (shade !== ".") {
+      return shade === "E" && (pose === "blink" || pose === "sleep") ? "L" : shade;
     }
     const cell = grid[y][x];
     if (cell === "E" && (pose === "blink" || pose === "sleep")) {
@@ -121,7 +131,12 @@ const TickSprite = (() => {
     draw(canvas);
   };
 
-  return { create, setState, setPose, toText, width, height, eyeColor: (name) => eyeColors[name || state], get state() { return state; } };
+  const setShades = (on) => {
+    wearingShades = Boolean(on);
+    render();
+  };
+
+  return { create, setState, setPose, setShades, toText, width, height, eyeColor: (name) => eyeColors[name || state], get state() { return state; } };
 })();
 
 function setTickState(state) {

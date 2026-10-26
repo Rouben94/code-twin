@@ -349,6 +349,7 @@ const privateButton = document.getElementById("private-chat");
 
 const setPrivate = (isPrivate) => {
   document.body.classList.toggle("private", isPrivate);
+  TickSprite.setShades(isPrivate);
   privateButton.setAttribute("aria-pressed", isPrivate ? "true" : "false");
   privateButton.title = isPrivate ? "Leave private chat (it is deleted) and start a saved chat" : "New private chat (not saved)";
   privateButton.setAttribute("aria-label", privateButton.title);
