@@ -11,6 +11,8 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
 {
     public const string McpServerName = "codetwin";
     private const string AgentName = "twincat";
+    private const string SessionPrefix = "codetwin-";
+    private const string PrivateSessionPrefix = "codetwin-private-";
 
     private readonly CopilotClient client = new(new CopilotClientOptions
     {
@@ -27,6 +29,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
     private string? model;
     private string? reasoningEffort;
     private SessionMode mode = SessionMode.Interactive;
+    private bool privateChat;
     private int permissionCounter;
 
     public Task StartAsync(CancellationToken cancellationToken) => client.StartAsync(cancellationToken);
@@ -163,10 +166,84 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         }
     }
 
-    public async Task NewChatAsync()
+    public async Task NewChatAsync(bool isPrivate)
     {
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
+        privateChat = isPrivate;
+    }
+
+    public async Task PublishSessionsAsync(string? solution, CancellationToken cancellationToken)
+    {
+        string? folder = SolutionFolder(solution);
+        IList<SessionMetadata> sessions = await client.ListSessionsAsync(null, cancellationToken).ConfigureAwait(false);
+        List<object> items = [];
+        foreach (SessionMetadata metadata in sessions.Where(metadata => metadata.SessionId.StartsWith(SessionPrefix, StringComparison.Ordinal)))
+        {
+            if (metadata.SessionId.StartsWith(PrivateSessionPrefix, StringComparison.Ordinal))
+            {
+                if (metadata.SessionId != session?.SessionId)
+                {
+                    await DeleteStoredSessionAsync(metadata.SessionId, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            else if (folder is not null && IsSameFolder(metadata.Context?.WorkingDirectory, folder))
+            {
+                items.Add(new
+                {
+                    id = metadata.SessionId,
+                    summary = metadata.Summary,
+                    modified = metadata.ModifiedTime,
+                    current = metadata.SessionId == session?.SessionId,
+                });
+            }
+        }
+
+        channel.Send(new { type = "sessions", items });
+    }
+
+    public async Task ResumeAsync(string id, string? solution, CancellationToken cancellationToken)
+    {
+        RejectPendingPermissions();
+        await CloseSessionAsync().ConfigureAwait(false);
+        privateChat = false;
+
+        session = await client.ResumeSessionAsync(
+            id,
+            new ResumeSessionConfig
+            {
+                ClientName = "CodeTwin",
+                WorkingDirectory = SolutionFolder(solution),
+                Agent = AgentName,
+                Model = model,
+                ReasoningEffort = reasoningEffort,
+                AgentDirectories = [options.AgentsDirectory],
+                SkillDirectories = [options.SkillsDirectory],
+                McpServers = CreateMcpServers(),
+                SystemMessage = new SystemMessageConfig { Mode = SystemMessageMode.Append, Content = ChatContext.CreateSystemMessage(solution) },
+                Streaming = true,
+                OnPermissionRequest = DecidePermissionAsync,
+                OnExitPlanModeRequest = DecidePlanAsync,
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        sessionSolution = solution;
+        IReadOnlyList<SessionEvent> events = await session.GetEventsAsync(cancellationToken).ConfigureAwait(false);
+        subscription = session.On<SessionEvent>(Forward);
+        PublishHistory(id, events);
+        await ApplyModeAsync(session, cancellationToken).ConfigureAwait(false);
+        await RefreshUsageAsync(session).ConfigureAwait(false);
+    }
+
+    public async Task DeleteAsync(string id, CancellationToken cancellationToken)
+    {
+        if (id == session?.SessionId)
+        {
+            RejectPendingPermissions();
+            await CloseSessionAsync().ConfigureAwait(false);
+        }
+
+        await client.DeleteSessionAsync(id, cancellationToken).ConfigureAwait(false);
     }
 
     public void ResolvePermission(string id, bool approved)
@@ -200,22 +277,15 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         session = await client.CreateSessionAsync(
             new SessionConfig
             {
+                SessionId = (privateChat ? PrivateSessionPrefix : SessionPrefix) + Guid.NewGuid().ToString("N"),
                 ClientName = "CodeTwin",
-                WorkingDirectory = string.IsNullOrEmpty(solution) ? null : Path.GetDirectoryName(solution),
+                WorkingDirectory = SolutionFolder(solution),
                 Agent = AgentName,
                 Model = model,
                 ReasoningEffort = reasoningEffort,
                 AgentDirectories = [options.AgentsDirectory],
                 SkillDirectories = [options.SkillsDirectory],
-                McpServers = new Dictionary<string, McpServerConfig>(StringComparer.Ordinal)
-                {
-                    [McpServerName] = new McpHttpServerConfig
-                    {
-                        Url = options.McpUrl,
-                        Headers = new Dictionary<string, string>(StringComparer.Ordinal) { ["Authorization"] = $"Bearer {options.McpToken}" },
-                        Tools = ["*"],
-                    },
-                },
+                McpServers = CreateMcpServers(),
                 SystemMessage = new SystemMessageConfig { Mode = SystemMessageMode.Append, Content = ChatContext.CreateSystemMessage(solution) },
                 Streaming = true,
                 OnPermissionRequest = DecidePermissionAsync,
@@ -225,10 +295,68 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
 
         sessionSolution = solution;
         subscription = session.On<SessionEvent>(Forward);
-        channel.Send(new { type = "session", solution });
+        channel.Send(new { type = "session", solution, id = session.SessionId, @private = privateChat });
         if (mode != SessionMode.Interactive)
         {
             await ApplyModeAsync(session, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private Dictionary<string, McpServerConfig> CreateMcpServers() => new(StringComparer.Ordinal)
+    {
+        [McpServerName] = new McpHttpServerConfig
+        {
+            Url = options.McpUrl,
+            Headers = new Dictionary<string, string>(StringComparer.Ordinal) { ["Authorization"] = $"Bearer {options.McpToken}" },
+            Tools = ["*"],
+        },
+    };
+
+    private static string? SolutionFolder(string? solution) =>
+        string.IsNullOrEmpty(solution) ? null : Path.GetDirectoryName(solution);
+
+    private static bool IsSameFolder(string? left, string right) =>
+        !string.IsNullOrEmpty(left)
+        && string.Equals(
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+            Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+            StringComparison.OrdinalIgnoreCase);
+
+    // Replays the stored conversation so the UI can rebuild the thread with its usual message types.
+    private void PublishHistory(string id, IReadOnlyList<SessionEvent> events)
+    {
+        List<object> items = [];
+        foreach (SessionEvent sessionEvent in events)
+        {
+            switch (sessionEvent)
+            {
+                case UserMessageEvent user:
+                    items.Add(new { kind = "user", text = user.Data.Content });
+                    break;
+                case AssistantMessageEvent message when !string.IsNullOrEmpty(message.Data.Content):
+                    items.Add(new { kind = "assistant", text = message.Data.Content });
+                    break;
+                case ToolExecutionStartEvent start:
+                    items.Add(new { kind = "tool", id = start.Data.ToolCallId, name = start.Data.McpToolName ?? start.Data.ToolName, status = "running" });
+                    break;
+                case ToolExecutionCompleteEvent complete:
+                    items.Add(new { kind = "tool", id = complete.Data.ToolCallId, status = complete.Data.Success ? "done" : "failed" });
+                    break;
+            }
+        }
+
+        channel.Send(new { type = "history", id, items });
+    }
+
+    private async Task DeleteStoredSessionAsync(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await client.DeleteSessionAsync(id, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            await Console.Error.WriteLineAsync($"Deleting the private chat {id} failed: {exception.Message}").ConfigureAwait(false);
         }
     }
 
@@ -238,8 +366,13 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         subscription = null;
         if (session is not null)
         {
+            string id = session.SessionId;
             await session.DisposeAsync().ConfigureAwait(false);
             session = null;
+            if (id.StartsWith(PrivateSessionPrefix, StringComparison.Ordinal))
+            {
+                await DeleteStoredSessionAsync(id, CancellationToken.None).ConfigureAwait(false);
+            }
         }
 
         sessionSolution = null;

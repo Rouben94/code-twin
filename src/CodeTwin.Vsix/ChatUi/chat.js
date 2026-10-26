@@ -236,10 +236,15 @@ const handlers = {
       showTick("run", "ready");
     }
   },
-  session: () => {
+  session: ({ private: isPrivate }) => {
+    document.body.classList.toggle("private", Boolean(isPrivate));
     if (thread.querySelector(".message.assistant")) {
       append(element("div", "divider", "New session"));
     }
+  },
+  history: ({ items }) => {
+    document.body.classList.remove("private");
+    replayHistory(items || []);
   },
   delta: ({ text }) => renderReply(replyText + (text || "")),
   message: ({ text }) => {
@@ -340,17 +345,54 @@ thread.addEventListener("click", async (event) => {
   setTimeout(() => { button.textContent = "Copy"; }, 1500);
 });
 
-document.getElementById("new-chat").addEventListener("click", () => {
-  post({ type: "newChat" });
+const resetThread = () => {
   thread.replaceChildren();
   welcome.hidden = false;
   tools.clear();
   endReply();
   activity = null;
+  turnHeadShown = false;
   setBusy(false);
   showTick(ready ? "run" : "warn", ready ? "ready" : "connecting");
+  document.dispatchEvent(new Event("chatreset"));
+};
+
+const startNewChat = (isPrivate) => {
+  post({ type: "newChat", private: isPrivate });
+  resetThread();
+  document.body.classList.toggle("private", isPrivate);
   prompt.focus();
-});
+};
+
+const replayHistory = (items) => {
+  resetThread();
+  for (const item of items) {
+    if (item.kind === "user") {
+      endReply();
+      activity = null;
+      turnHeadShown = false;
+      append(element("div", "message user", item.text));
+    } else if (item.kind === "assistant") {
+      renderReply(item.text);
+      endReply();
+    } else if (item.kind === "tool") {
+      showTool(item);
+    }
+  }
+  endReply();
+  activity = null;
+  for (const item of tools.values()) {
+    if (item.state === "running") {
+      item.state = "failed";
+      item.icon.className = "state failed";
+      summarize(item.block);
+    }
+  }
+  messages.scrollTop = messages.scrollHeight;
+};
+
+document.getElementById("new-chat").addEventListener("click", () => startNewChat(false));
+document.getElementById("private-chat").addEventListener("click", () => startNewChat(true));
 
 window.addEventListener("focus", () => post({ type: "getContext" }));
 

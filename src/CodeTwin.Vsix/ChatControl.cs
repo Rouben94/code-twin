@@ -116,6 +116,16 @@ internal sealed class ChatControl : UserControl, IDisposable
                     activeElement,
                 }));
                 break;
+            case "listSessions":
+            case "resumeSession":
+            case "deleteSession":
+                sidecar.Send(JsonSerializer.Serialize(new
+                {
+                    type,
+                    id = root.TryGetProperty("id", out JsonElement id) ? id.GetString() : null,
+                    solution = context.GetSolution(),
+                }));
+                break;
             default:
                 sidecar.Send(message);
                 break;

@@ -69,6 +69,12 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      `copilot_internal/user` endpoint: a deliberate, user-approved exception to the public-interface rule.
      It uses `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` or `GITHUB_TOKEN`, else `gh auth token` when gh is signed
      in to the same account as Copilot. Any failure hides the figure; nothing else depends on it.
+   - Chat history mirrors the Copilot CLI session store instead of keeping a separate one. CodeTwin
+     sessions get a `codetwin-` ID; the list shows those whose working directory is the solution
+     folder (the SDK's list filter is ignored, so the sidecar filters). Resuming replays the stored
+     user, assistant and tool events. Private chats use `codetwin-private-` and are deleted on close;
+     `EnableSessionStore = false` still stores the session, so it is not used. Leftover private
+     sessions, e.g. after a crash, are deleted the next time the history is listed.
 4. **Generic desktop package** – one global Copilot/Claude plugin = agent + skills + MCP config
    pointing to a generic `code-twin-mcp` bridge. Contains NO repository-specific data.
    The project is resolved at call time from the path the desktop app passes

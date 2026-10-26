@@ -381,7 +381,7 @@
   modelButton.addEventListener("click", () => openMenu(modelButton, renderModelMenu));
   usageButton.addEventListener("click", () => openMenu(usageButton, renderUsagePanel));
 
-  document.getElementById("new-chat").addEventListener("click", () => {
+  document.addEventListener("chatreset", () => {
     closeMenu();
     resetSessionUsage();
   });

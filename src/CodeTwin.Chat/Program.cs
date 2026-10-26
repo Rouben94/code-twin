@@ -87,7 +87,17 @@ async Task HandleAsync(string line)
             await host.AbortAsync(CancellationToken.None);
             break;
         case "newChat":
-            await host.NewChatAsync();
+            await host.NewChatAsync(command.TryGetProperty("private", out JsonElement isPrivate) && isPrivate.ValueKind == JsonValueKind.True);
+            break;
+        case "listSessions":
+            await host.PublishSessionsAsync(GetOptionalString(command, "solution"), CancellationToken.None);
+            break;
+        case "resumeSession":
+            await host.ResumeAsync(command.GetProperty("id").GetString() ?? string.Empty, GetOptionalString(command, "solution"), CancellationToken.None);
+            break;
+        case "deleteSession":
+            await host.DeleteAsync(command.GetProperty("id").GetString() ?? string.Empty, CancellationToken.None);
+            await host.PublishSessionsAsync(GetOptionalString(command, "solution"), CancellationToken.None);
             break;
         case "permission":
             host.ResolvePermission(command.GetProperty("id").GetString() ?? string.Empty, command.GetProperty("approved").GetBoolean());
