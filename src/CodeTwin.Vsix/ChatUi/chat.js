@@ -222,6 +222,24 @@ const showError = (text) => {
   append(element("div", "message error", text));
 };
 
+let signInCard = null;
+
+// Sign-in runs in Copilot CLI's own window (`copilot login`); the chat only starts it.
+const showSignedOut = () => {
+  setStatus("offline", "Not signed in");
+  showTick("error", "not signed in");
+  signInCard = append(element("div", "permission"));
+  signInCard.appendChild(element("div", "title", "Sign in to GitHub Copilot"));
+  signInCard.appendChild(element("div", "", "The chat uses your GitHub Copilot account. Sign-in opens in a Copilot window; CodeTwin never sees your credentials."));
+  const actions = signInCard.appendChild(element("div", "actions"));
+  const button = actions.appendChild(element("button", "button primary", "Sign in"));
+  button.addEventListener("click", () => {
+    button.disabled = true;
+    button.textContent = "Waiting for sign-in...";
+    post({ type: "signIn" });
+  });
+};
+
 const handlers = {
   theme: ({ colors }) => {
     for (const [name, value] of Object.entries(colors)) {
@@ -231,6 +249,18 @@ const handlers = {
   context: ({ solution, activeElement }) => showContext(solution, activeElement),
   ready: () => {
     ready = true;
+    setStatus("online", "twincat agent");
+    if (!busy) {
+      showTick("run", "ready");
+    }
+  },
+  auth: ({ signedIn }) => {
+    signInCard?.remove();
+    signInCard = null;
+    if (!signedIn) {
+      showSignedOut();
+      return;
+    }
     setStatus("online", "twincat agent");
     if (!busy) {
       showTick("run", "ready");

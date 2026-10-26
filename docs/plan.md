@@ -64,12 +64,11 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      and a usage ring (context window, token totals, premium requests). Modes use the experimental
      `session.mode.set` RPC, because `MessageOptions.AgentMode` alone does not switch the session.
      Quota uses the experimental account quota RPC. Both are GHCP001.
-   - The usage popover also shows the Copilot plan and its reset date (experimental account auth RPC),
-     the AI credits of the current chat (experimental usage metrics RPC), and the account's monthly
-     AI credits. The SDK has no monthly total, so that one figure is read from GitHub's undocumented
-     `copilot_internal/user` endpoint: a deliberate, user-approved exception to the public-interface rule.
-     It uses `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` or `GITHUB_TOKEN`, else `gh auth token` when gh is signed
-     in to the same account as Copilot. Any failure hides the figure; nothing else depends on it.
+   - The usage popover also shows the AI credits of the current chat (experimental usage metrics RPC).
+   - CodeTwin never handles LLM credentials. The sidecar only asks Copilot CLI whether it is signed in
+     (`GetAuthStatusAsync`); if not, the chat offers a Sign in button that starts `copilot login` in
+     its own window. An earlier monthly AI-credits figure read a GitHub token (environment variables,
+     `gh auth token`) for an undocumented endpoint; it was removed in Phase 6.
    - Chat history mirrors the Copilot CLI session store instead of keeping a separate one. CodeTwin
      sessions get a `codetwin-` ID; the list shows those whose working directory is the solution
      folder (the SDK's list filter is ignored, so the sidecar filters). Resuming replays the stored

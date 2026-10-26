@@ -41,13 +41,14 @@ channel.Ready();
 
 try
 {
-    await host.PublishModelsAsync(CancellationToken.None);
-    await host.PublishQuotaAsync(CancellationToken.None);
-    await host.PublishAccountAsync(CancellationToken.None);
+    if (await host.PublishAuthStatusAsync(CancellationToken.None))
+    {
+        await PublishAccountDataAsync();
+    }
 }
 catch (Exception exception)
 {
-    await Console.Error.WriteLineAsync($"Reading the Copilot models or usage failed: {exception.Message}");
+    await Console.Error.WriteLineAsync($"Reading the Copilot sign-in status failed: {exception.Message}");
 }
 
 using StreamReader input = new(Console.OpenStandardInput(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
@@ -118,6 +119,25 @@ async Task HandleAsync(string line)
         case "setPermissions":
             host.SetToolPermissions(GetOptionalString(command, "permissions"));
             break;
+        case "signIn":
+            if (await host.SignInAsync(CancellationToken.None))
+            {
+                await PublishAccountDataAsync();
+            }
+            break;
+    }
+}
+
+async Task PublishAccountDataAsync()
+{
+    try
+    {
+        await host.PublishModelsAsync(CancellationToken.None);
+        await host.PublishQuotaAsync(CancellationToken.None);
+    }
+    catch (Exception exception)
+    {
+        await Console.Error.WriteLineAsync($"Reading the Copilot models or usage failed: {exception.Message}");
     }
 }
 

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using GitHub.Copilot;
 using GitHub.Copilot.Rpc;
@@ -22,7 +23,6 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<bool>> pendingPermissions = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, TaskCompletionSource<ExitPlanModeResult>> pendingPlans = new(StringComparer.Ordinal);
-    private readonly MonthlyCreditsReader monthlyCredits = new();
     private CopilotSession? session;
     private IDisposable? subscription;
     private string? sessionSolution;
@@ -76,41 +76,21 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
     }
 #pragma warning restore GHCP001
 
-#pragma warning disable GHCP001 // The account auth RPC is the only SDK source for the Copilot plan and login.
-    public async Task PublishAccountAsync(CancellationToken cancellationToken)
+    public async Task<bool> PublishAuthStatusAsync(CancellationToken cancellationToken)
     {
-        AuthInfoUser? user = await ReadSignedInUserAsync(cancellationToken).ConfigureAwait(false);
-        MonthlyCredits? monthly = await monthlyCredits.ReadAsync(user?.Login, cancellationToken).ConfigureAwait(false);
-        string? plan = user?.CopilotUser?.CopilotPlan ?? monthly?.Plan;
-        if (plan is null && monthly is null)
-        {
-            return;
-        }
-
-        channel.Send(new
-        {
-            type = "account",
-            plan,
-            resetDate = user?.CopilotUser?.QuotaResetDateUtc ?? monthly?.ResetDateUtc,
-            creditsUsed = monthly?.CreditsUsed,
-        });
+        GetAuthStatusResponse status = await client.GetAuthStatusAsync(cancellationToken).ConfigureAwait(false);
+        channel.Send(new { type = "auth", signedIn = status.IsAuthenticated });
+        return status.IsAuthenticated;
     }
 
-    // The auth RPC fails to deserialize environment-token auth (missing 'token'), so it is optional.
-    private async Task<AuthInfoUser?> ReadSignedInUserAsync(CancellationToken cancellationToken)
+    // Sign-in stays with Copilot CLI: it runs `copilot login` in its own console window, CodeTwin never sees a credential.
+    public async Task<bool> SignInAsync(CancellationToken cancellationToken)
     {
-        try
-        {
-            AccountGetCurrentAuthResult result = await client.Rpc.Account.GetCurrentAuthAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-            return result.AuthInfo as AuthInfoUser;
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            await Console.Error.WriteLineAsync($"Reading the Copilot account failed: {exception.Message}").ConfigureAwait(false);
-            return null;
-        }
+        using Process login = Process.Start(new ProcessStartInfo(options.CliPath, "login") { UseShellExecute = true })
+            ?? throw new InvalidOperationException("Copilot sign-in could not be started.");
+        await login.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+        return await PublishAuthStatusAsync(cancellationToken).ConfigureAwait(false);
     }
-#pragma warning restore GHCP001
 
 #pragma warning disable GHCP001 // The usage metrics RPC is the only SDK source for the AI credits a chat consumed.
     private async Task PublishChatCreditsAsync(CopilotSession target, CancellationToken cancellationToken)
@@ -271,7 +251,6 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
         await client.DisposeAsync().ConfigureAwait(false);
-        monthlyCredits.Dispose();
     }
 
     private async Task StartSessionAsync(string? solution, CancellationToken cancellationToken)
@@ -438,7 +417,6 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
             }
 
             await PublishQuotaAsync(CancellationToken.None).ConfigureAwait(false);
-            await PublishAccountAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
