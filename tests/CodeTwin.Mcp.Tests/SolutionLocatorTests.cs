@@ -58,6 +58,34 @@ public sealed class SolutionLocatorTests : IDisposable
         Assert.Throws<ArgumentException>(() => SolutionLocator.Locate("repo"));
     }
 
+    [Fact]
+    public void FindsTheOneSolutionAcrossTheRepositoriesOfASession()
+    {
+        string hmi = Directory.CreateDirectory(Path.Combine(root, "Hmi")).FullName;
+        string solution = CreateTwinCatSolution(Path.Combine(root, "Plc"));
+
+        Assert.Equal(solution, SolutionLocator.Locate([hmi, Path.Combine(root, "Plc"), root]));
+    }
+
+    [Fact]
+    public void RejectsSeveralSolutionsAcrossRepositories()
+    {
+        CreateTwinCatSolution(Path.Combine(root, "Plc"));
+        CreateTwinCatSolution(Path.Combine(root, "PlcLibrary"));
+
+        Assert.Throws<ArgumentException>(
+            () => SolutionLocator.Locate([Path.Combine(root, "Plc"), Path.Combine(root, "PlcLibrary")]));
+    }
+
+    [Fact]
+    public void ReturnsNullWhenNoRepositoryHasATwinCatSolution()
+    {
+        string hmi = Directory.CreateDirectory(Path.Combine(root, "Hmi")).FullName;
+        string docs = Directory.CreateDirectory(Path.Combine(root, "Docs")).FullName;
+
+        Assert.Null(SolutionLocator.Locate([hmi, docs]));
+    }
+
     private static string CreateTwinCatSolution(string folder)
     {
         string plcFolder = Directory.CreateDirectory(Path.Combine(folder, "Machine", "Plc")).FullName;

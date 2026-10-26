@@ -84,6 +84,48 @@ public sealed class ShellBridgeTests : IDisposable
     }
 
     [Fact]
+    public async Task PicksThePlcRepositoryOfAMultiRepoSessionOverAnotherOpenShell()
+    {
+        string hmi = Directory.CreateDirectory(Path.Combine(repository, "Hmi")).FullName;
+        string plc = Directory.CreateDirectory(Path.Combine(repository, "Plc")).FullName;
+        string solution = CreateTwinCatSolution(plc);
+        using ShellBridge bridge = CreateBridge();
+        var tools = new BridgeTools(bridge);
+        using InProcessMcpServer shell = StartShell("token");
+
+        openSolution = Path.Combine(instances, "Elsewhere.sln");
+        CallToolResult hmiOnly = await InitializeAsync(tools, hmi);
+        openSolution = solution;
+        CallToolResult withPlc = await InitializeAsync(tools, hmi, plc);
+
+        Assert.False(hmiOnly.StructuredContent?.GetProperty("foundInPaths").GetBoolean());
+        Assert.Contains("not the project", Assert.IsType<TextContentBlock>(hmiOnly.Content[0]).Text, StringComparison.Ordinal);
+        Assert.NotEqual(true, withPlc.IsError);
+        Assert.Equal(solution, withPlc.StructuredContent?.GetProperty("solution").GetString());
+        Assert.True(withPlc.StructuredContent?.GetProperty("foundInPaths").GetBoolean());
+    }
+
+    [Fact]
+    public async Task RejectsAdditionalPathsThatAreNotStrings()
+    {
+        using ShellBridge bridge = CreateBridge();
+
+        CallToolResult result = await new BridgeTools(bridge).CallAsync(
+            new CallToolRequestParams
+            {
+                Name = BridgeTools.InitializeToolName,
+                Arguments = new Dictionary<string, JsonElement>
+                {
+                    ["path"] = JsonSerializer.SerializeToElement(repository),
+                    ["additionalPaths"] = JsonSerializer.SerializeToElement(repository),
+                },
+            },
+            CancellationToken.None);
+
+        Assert.True(result.IsError);
+    }
+
+    [Fact]
     public void ListsInitializeAndAllShellTools()
     {
         using ShellBridge bridge = CreateBridge();
@@ -107,12 +149,16 @@ public sealed class ShellBridgeTests : IDisposable
         return server;
     }
 
-    private static Task<CallToolResult> InitializeAsync(BridgeTools tools, string path) =>
+    private static Task<CallToolResult> InitializeAsync(BridgeTools tools, string path, params string[] additionalPaths) =>
         tools.CallAsync(
             new CallToolRequestParams
             {
                 Name = BridgeTools.InitializeToolName,
-                Arguments = new Dictionary<string, JsonElement> { ["path"] = JsonSerializer.SerializeToElement(path) },
+                Arguments = new Dictionary<string, JsonElement>
+                {
+                    ["path"] = JsonSerializer.SerializeToElement(path),
+                    ["additionalPaths"] = JsonSerializer.SerializeToElement(additionalPaths),
+                },
             },
             CancellationToken.None).AsTask();
 

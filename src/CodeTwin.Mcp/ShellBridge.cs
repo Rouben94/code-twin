@@ -5,7 +5,8 @@ using System.Text.Json;
 
 namespace CodeTwin.Mcp;
 
-internal sealed record InitializeResult(string Solution, int Pid, bool Started);
+/// <param name="FoundInPaths">False when no path had a TwinCAT solution and the only shell with a solution open was used.</param>
+internal sealed record InitializeResult(string Solution, int Pid, bool Started, bool FoundInPaths);
 
 /// <summary>Binds the session to one TwinCAT XAE Shell and forwards MCP tool calls to its HTTP endpoint.</summary>
 /// <remarks>
@@ -23,14 +24,14 @@ internal sealed class ShellBridge(
     private string? solution;
     private int nextRequestId;
 
-    public async Task<InitializeResult> InitializeAsync(string path, CancellationToken cancellationToken)
+    public async Task<InitializeResult> InitializeAsync(IReadOnlyCollection<string> paths, CancellationToken cancellationToken)
     {
-        string? located = SolutionLocator.Locate(path);
+        string? located = SolutionLocator.Locate(paths);
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             InitializeResult result = located is null
-                ? await BindOnlyOpenSolutionAsync(path, cancellationToken).ConfigureAwait(false)
+                ? await BindOnlyOpenSolutionAsync(string.Join("', '", paths), cancellationToken).ConfigureAwait(false)
                 : await BindAsync(located, cancellationToken).ConfigureAwait(false);
             solution = result.Solution;
             return result;
@@ -68,7 +69,7 @@ internal sealed class ShellBridge(
             token => FindShellWithSolutionAsync(located, token),
             cancellationToken).ConfigureAwait(false);
         shell = found;
-        return new InitializeResult(located, found.Pid, started);
+        return new InitializeResult(located, found.Pid, started, FoundInPaths: true);
     }
 
     private async Task<InitializeResult> BindOnlyOpenSolutionAsync(string path, CancellationToken cancellationToken)
@@ -86,11 +87,11 @@ internal sealed class ShellBridge(
         {
             case 1:
                 shell = open[0].Shell;
-                return new InitializeResult(open[0].Solution, open[0].Shell.Pid, Started: false);
+                return new InitializeResult(open[0].Solution, open[0].Shell.Pid, Started: false, FoundInPaths: false);
             case 0:
                 throw new ArgumentException(
                     $"No TwinCAT solution (.sln with a .tsproj) found for '{path}', and no TwinCAT XAE Shell with CodeTwin has a solution open. "
-                    + "Ask the user for the path of the TwinCAT repository, .sln or .plcproj.");
+                    + "Pass every repository of the session (path and additionalPaths), or ask the user for the path of the TwinCAT repository, .sln or .plcproj.");
             default:
                 throw new ArgumentException(
                     $"No TwinCAT solution found for '{path}', and several TwinCAT XAE Shells are open: "

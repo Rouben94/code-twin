@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace CodeTwin.Mcp;
 
-/// <summary>Finds the TwinCAT solution (.sln that references a .tsproj) for a repository, folder or project file path.</summary>
+/// <summary>Finds the TwinCAT solution (.sln that references a .tsproj) for repository, folder or project file paths.</summary>
 /// <remarks>Returns null when an existing path has no TwinCAT solution; throws for invalid paths and ambiguous results.</remarks>
 internal static partial class SolutionLocator
 {
@@ -12,6 +12,17 @@ internal static partial class SolutionLocator
     {
         "bin", "obj", "node_modules", "_Boot", "_CompileInfo", "_Libraries", "_Deployment",
     };
+
+    /// <summary>Finds the one TwinCAT solution across several paths, e.g. the repositories of a multi-repo session.</summary>
+    public static string? Locate(IReadOnlyCollection<string> paths)
+    {
+        List<string> solutions = paths
+            .Select(Locate)
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return Single(solutions, string.Join("', '", paths));
+    }
 
     public static string? Locate(string path)
     {
