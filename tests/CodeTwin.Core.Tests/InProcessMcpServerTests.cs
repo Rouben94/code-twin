@@ -71,6 +71,27 @@ public sealed class InProcessMcpServerTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("Bearer secre")]
+    [InlineData("Bearer secret2")]
+    [InlineData("bearer secret")]
+    public async Task RejectsTokensThatOnlyPartlyMatch(string authorization)
+    {
+        int port = ReservePort();
+        using var server = new InProcessMcpServer(new DelegatingPlcAutomation(() => Array.Empty<PlcElement>()), "secret", port);
+        server.Start();
+        using var client = new HttpClient { BaseAddress = new Uri(server.Endpoint) };
+        using var request = new HttpRequestMessage(HttpMethod.Post, string.Empty)
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json"),
+        };
+        request.Headers.TryAddWithoutValidation("Authorization", authorization);
+
+        HttpResponseMessage response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     [Fact]
     public async Task WriteAndSaveToolsUpdateTheAutomationAdapter()
     {

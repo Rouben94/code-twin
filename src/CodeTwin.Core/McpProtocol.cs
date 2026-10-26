@@ -95,7 +95,7 @@ public sealed class InProcessMcpServer : IDisposable
                 return;
             }
 
-            if (!string.Equals(context.Request.Headers["Authorization"], $"Bearer {token}", StringComparison.Ordinal))
+            if (!IsAuthorized(context.Request.Headers["Authorization"]))
             {
                 context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 return;
@@ -145,6 +145,20 @@ public sealed class InProcessMcpServer : IDisposable
 
         return Uri.TryCreate(origin, UriKind.Absolute, out Uri? uri)
             && (uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Constant-time comparison, so response timing does not reveal how much of the token matched.
+    private bool IsAuthorized(string? authorization)
+    {
+        byte[] expected = Encoding.UTF8.GetBytes("Bearer " + token);
+        byte[] actual = Encoding.UTF8.GetBytes(authorization ?? string.Empty);
+        int difference = expected.Length ^ actual.Length;
+        for (int i = 0; i < expected.Length; i++)
+        {
+            difference |= expected[i] ^ (i < actual.Length ? actual[i] : 0);
+        }
+
+        return difference == 0;
     }
 
     private JsonElement HandleMessage(JsonElement request)
