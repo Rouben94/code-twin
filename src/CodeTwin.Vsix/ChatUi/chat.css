@@ -172,25 +172,21 @@ header {
   color: var(--muted);
 }
 
-.suggestions {
+.recent-chats {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
-.suggestion {
-  padding: 6px 14px;
+  flex-direction: column;
+  width: min(420px, 100%);
+  padding: 4px;
   border: 1px solid var(--hairline);
-  border-radius: 999px;
-  background: transparent;
-  font-size: 13px;
+  border-radius: 12px;
+  text-align: left;
 }
 
-.suggestion:hover {
-  background: var(--surface);
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
-}
+.recent-chats[hidden] { display: none; }
+.recent-chats .menu-title { padding-top: 6px; }
+.recent-chats .menu-item { align-items: baseline; }
+.recent-chats .history-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-chats .show-all { justify-content: center; color: var(--link); font-size: 12px; }
 
 #thread {
   display: flex;

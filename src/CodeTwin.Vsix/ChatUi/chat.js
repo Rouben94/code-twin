@@ -323,14 +323,6 @@ prompt.addEventListener("keydown", (event) => {
   }
 });
 
-for (const suggestion of document.querySelectorAll(".suggestion")) {
-  suggestion.addEventListener("click", () => {
-    prompt.value = suggestion.dataset.prompt;
-    autosize();
-    prompt.focus();
-  });
-}
-
 thread.addEventListener("click", async (event) => {
   const button = event.target.closest(".copy");
   if (!button) {

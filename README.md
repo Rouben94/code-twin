@@ -38,7 +38,7 @@ The window hosts a WebView2 page (`src/CodeTwin.Vsix/ChatUi`) and starts the sid
 
 CodeTwin tool calls and file reads run without asking. Anything else, such as the PowerShell script of the InfoSys search, shell commands, file writes or URLs, shows an Allow/Deny card in the chat. **New chat** starts a fresh session. The sidecar starts when the window opens and stops with the shell.
 
-Chats are saved by the Copilot CLI in its own session store (`%USERPROFILE%\.copilot\session-state`). The **history** button lists the CodeTwin chats of the open solution; pick one to reload it and continue, or delete it. The **lock** button starts a private chat; click it again to leave it and start a saved chat. A private chat is not listed and is deleted when you leave it, start another chat, switch chats or close the shell. Prompts of a private chat still go to GitHub Copilot.
+Chats are saved by the Copilot CLI in its own session store (`%USERPROFILE%\.copilot\session-state`). The **history** button lists the CodeTwin chats of the open solution; pick one to reload it and continue, or delete it. A new chat shows the five most recent ones on its start page. The **lock** button starts a private chat; click it again to leave it and start a saved chat. A private chat is not listed and is deleted when you leave it, start another chat, switch chats or close the shell. Prompts of a private chat still go to GitHub Copilot.
 
 The bar under the message box picks the mode and the model, and shows usage:
 

@@ -35,11 +35,7 @@
         <h1>Hi, I'm Tick. What should we work on?</h1>
         <p id="welcome-context">The twincat agent reads, edits and builds the PLC project open in this shell.</p>
         <p class="private-note">Private chat: it is not saved in the chat history and is deleted when you leave it. Prompts still go to GitHub Copilot.</p>
-        <div class="suggestions">
-          <button type="button" class="suggestion" data-prompt="Explain what the active POU does and point out possible issues.">Explain the active POU</button>
-          <button type="button" class="suggestion" data-prompt="Build the solution and fix every compile error until the build is clean.">Build and fix errors</button>
-          <button type="button" class="suggestion" data-prompt="Write TcUnit tests for the active POU.">Write TcUnit tests</button>
-        </div>
+        <div id="recent-chats" class="recent-chats" hidden></div>
       </section>
       <div id="thread"></div>
       <div id="typing" class="typing" hidden><span></span><span></span><span></span></div>

@@ -4,7 +4,10 @@
 (() => {
   const historyButton = document.getElementById("history");
   const panel = document.getElementById("history-panel");
+  const recent = document.getElementById("recent-chats");
+  const recentLimit = 5;
   let sessions = null;
+  let recentLoaded = false;
 
   const relativeTime = (value) => {
     const date = new Date(value);
@@ -35,6 +38,17 @@
     historyButton.setAttribute("aria-expanded", "false");
   };
 
+  const resume = (session) => {
+    close();
+    if (!session.current) {
+      showTick("warn", "loading chat");
+      post({ type: "resumeSession", id: session.id });
+    }
+    prompt.focus();
+  };
+
+  const sortedSessions = () => [...sessions].sort((a, b) => new Date(b.modified) - new Date(a.modified));
+
   const sessionRow = (session) => {
     const row = element("div", `history-item${session.current ? " current" : ""}`);
     const open = row.appendChild(element("button", "menu-item"));
@@ -45,14 +59,7 @@
     const text = open.appendChild(element("span", "menu-text"));
     text.appendChild(element("span", "menu-label history-summary", (session.summary || "Untitled chat").trim()));
     text.appendChild(element("span", "menu-detail", relativeTime(session.modified)));
-    open.addEventListener("click", () => {
-      close();
-      if (!session.current) {
-        showTick("warn", "loading chat");
-        post({ type: "resumeSession", id: session.id });
-      }
-      prompt.focus();
-    });
+    open.addEventListener("click", () => resume(session));
 
     const remove = row.appendChild(element("button", "history-delete"));
     remove.type = "button";
@@ -67,8 +74,37 @@
         startNewChat(false);
       }
       render();
+      renderRecent();
     });
     return row;
+  };
+
+  const renderRecent = () => {
+    const items = sessions ? sortedSessions().filter((s) => !s.current).slice(0, recentLimit) : [];
+    recent.hidden = !items.length;
+    recent.replaceChildren();
+    if (!items.length) {
+      return;
+    }
+    recent.appendChild(element("div", "menu-title", "Recent chats"));
+    for (const session of items) {
+      const open = recent.appendChild(element("button", "menu-item"));
+      open.type = "button";
+      const text = open.appendChild(element("span", "menu-text"));
+      text.appendChild(element("span", "menu-label history-summary", (session.summary || "Untitled chat").trim()));
+      open.appendChild(element("span", "menu-meta", relativeTime(session.modified)));
+      open.addEventListener("click", () => resume(session));
+    }
+    if (sessions.filter((s) => !s.current).length > items.length) {
+      const all = recent.appendChild(element("button", "menu-item show-all", "Show all chats"));
+      all.type = "button";
+      all.addEventListener("click", () => historyButton.click());
+    }
+  };
+
+  const loadRecent = () => {
+    recentLoaded = true;
+    post({ type: "listSessions" });
   };
 
   const render = () => {
@@ -84,7 +120,7 @@
     if (busy) {
       panel.appendChild(element("div", "menu-empty", "Stop the current reply to switch chats."));
     }
-    for (const session of [...sessions].sort((a, b) => new Date(b.modified) - new Date(a.modified))) {
+    for (const session of sortedSessions()) {
       panel.appendChild(sessionRow(session));
     }
   };
@@ -106,7 +142,30 @@
     if (isOpen()) {
       render();
     }
+    renderRecent();
   };
+
+  handlers.ready = ((markReady) => (message) => {
+    markReady(message);
+    loadRecent();
+  })(handlers.ready);
+
+  handlers.context = ((showSolution) => {
+    let solution;
+    return (message) => {
+      showSolution(message);
+      if (recentLoaded && message.solution !== solution) {
+        loadRecent();
+      }
+      solution = message.solution;
+    };
+  })(handlers.context);
+
+  document.addEventListener("chatreset", () => {
+    if (ready) {
+      loadRecent();
+    }
+  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && isOpen()) {
