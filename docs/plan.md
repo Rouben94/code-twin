@@ -122,6 +122,20 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      - ChatGPT desktop: verify whether local (stdio) MCP servers are supported; otherwise out of scope
    - The TwinCAT rules live only in the `twincat` agent and apply only when the user picks it.
      The MCP server's instructions stay limited to tool usage (call `initialize` first).
+   - Security review before shipping, done:
+     - Chat: reads are auto-approved only inside the solution folder and the shipped agent and skills;
+       network paths are never auto-approved (they would send the Windows credentials).
+       Approve all is no longer persisted.
+     - Bridge: `initialize` refuses network and device paths; discovery endpoints must be
+       `http` loopback `/mcp`, so the token is never sent elsewhere.
+     - In-shell server: constant-time token comparison.
+     - No LLM credential handling: the monthly AI-credits reader (GitHub token, `gh auth token`)
+       and the account auth RPC are removed; sign-in is delegated to `copilot login`.
+   - Installer decisions: Inno Setup, per user. Copilot CLI and app first; client registration kept
+     generic so Claude Code and Codex can follow. `code-twin-mcp` is built in CI and installed to
+     `%LOCALAPPDATA%\Programs\CodeTwin` (on the user `PATH`); the plugin is installed from a local
+     marketplace in the install folder. No build artifacts in git (the exe and `.github/plugin` go);
+     `tools\Install-TcXaeShell.ps1` stays and is called by the setup. Authenticode-sign setup and binaries.
 7. **Beyond PLC code (System Manager)** – generic tree tools on ITcSmTreeItem
    (LookupTreeItem, CreateChild, ProduceXml/ConsumeXml, LinkVariables) plus domain skills:
    - I/O / EtherCAT: scan (guarded), add boxes/terminals, PDO config, variable linking
