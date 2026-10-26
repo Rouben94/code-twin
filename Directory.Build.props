@@ -3,6 +3,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Set MAJOR.MINOR here; CI sets PATCH when it releases from main. -->
     <Version>0.1.0</Version>
   </PropertyGroup>
 </Project>

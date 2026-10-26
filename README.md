@@ -6,7 +6,7 @@ AI engineering for TwinCAT: a Visual Studio / TwinCAT XAE Shell extension that l
 
 Requirements: Windows x64, TwinCAT XAE Shell (TwinCAT 3.1.4026), the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) and [Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli) for the chat and the agent plugin.
 
-Close TcXaeShell and run `CodeTwin-Setup-<version>.exe`. It installs per user (no admin rights) into `%LOCALAPPDATA%\Programs\CodeTwin`:
+Close TcXaeShell and run `CodeTwin-Setup-<version>.exe` from the [releases](https://github.com/Rouben94/code-twin/releases). It installs per user (no admin rights) into `%LOCALAPPDATA%\Programs\CodeTwin`:
 
 - the extension into TcXaeShell (through `tools\Install-TcXaeShell.ps1`),
 - the [TwinCAT agent plugin](#twincat-agent-plugin) with the `code-twin-mcp` bridge, registered with Copilot CLI and the Copilot app as a local marketplace (`copilot plugin marketplace add`, `copilot plugin install twincat@code-twin`).
@@ -14,6 +14,8 @@ Close TcXaeShell and run `CodeTwin-Setup-<version>.exe`. It installs per user (n
 To update, run a newer setup. Uninstall from **Settings > Apps**; this removes the extension and the Copilot registration as well.
 
 Build the setup with `installer\Build-Setup.ps1` (needs the .NET 10 SDK, the Visual Studio SDK build tools and [Inno Setup 6](https://jrsoftware.org/isinfo.php)); it writes `artifacts\CodeTwin-Setup-<version>.exe`. For development, `dotnet build CodeTwin.slnx -c Release` and `tools\Install-TcXaeShell.ps1` deploy just the extension; details and Visual Studio install in [docs/spike.md](docs/spike.md).
+
+CI (`.github/workflows/ci.yml`) builds, tests and builds the setup for every pull request and push to `main`; the setup is kept as a workflow artifact for 14 days. Every push to `main` also publishes a GitHub release `v<MAJOR>.<MINOR>.<PATCH>`: MAJOR.MINOR come from `Directory.Build.props`, PATCH counts up automatically from the last release of that MAJOR.MINOR and restarts at 0 when you change it.
 
 ## MCP server
 

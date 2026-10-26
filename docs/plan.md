@@ -138,7 +138,11 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      there). `code-twin-mcp` sits in the plugin's `bin` folder, so `mcp.json` stays relative and no
      `PATH` change is needed; later clients (Claude Code, Codex) get the absolute path.
      `installer\Build-Setup.ps1` builds the VSIX, publishes the bridge and compiles the setup into
-     `artifacts\`. No build artifacts in git. Open: CI release build, Authenticode signing.
+     `artifacts\`. No build artifacts in git.
+   - CI, done (`.github/workflows/ci.yml`): build, test and setup on every pull request and push
+     to `main`; every push to `main` releases `v<MAJOR>.<MINOR>.<PATCH>` with the setup attached
+     (MAJOR.MINOR from `Directory.Build.props`, PATCH automatic). Open: signing, planned with the
+     free SignPath Foundation OSS certificate once the repository is public and has a release.
 7. **Beyond PLC code (System Manager)** – generic tree tools on ITcSmTreeItem
    (LookupTreeItem, CreateChild, ProduceXml/ConsumeXml, LinkVariables) plus domain skills:
    - I/O / EtherCAT: scan (guarded), add boxes/terminals, PDO config, variable linking

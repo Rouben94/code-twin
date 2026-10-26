@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Pull request runs are replaced by newer pushes; main runs queue so every release gets its own patch number.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Compute version
+        id: version
+        # MAJOR.MINOR comes from Directory.Build.props; PATCH is one above the last release tag of that MAJOR.MINOR.
+        run: |
+          $base = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
+          $majorMinor = ($base -split '\.')[0..1] -join '.'
+          $pattern = '^v' + [regex]::Escape($majorMinor) + '\.(\d+)$'
+          $patches = git tag --list "v$majorMinor.*" | Where-Object { $_ -match $pattern } | ForEach-Object { [int]$Matches[1] }
+          $patch = if ($patches) { ($patches | Measure-Object -Maximum).Maximum + 1 } else { 0 }
+          $version = "$majorMinor.$patch"
+          "value=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "Version $version"
+
+      - name: Build
+        run: dotnet build CodeTwin.slnx -c Release "-p:Version=${{ steps.version.outputs.value }}"
+
+      - name: Test
+        run: dotnet test CodeTwin.slnx -c Release --no-build
+
+      - name: Install Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
+
+      - name: Build setup
+        run: installer\Build-Setup.ps1 -Version ${{ steps.version.outputs.value }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CodeTwin-Setup-${{ steps.version.outputs.value }}
+          path: artifacts/CodeTwin-Setup-*.exe
+          retention-days: 14
+
+      - name: Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = '${{ steps.version.outputs.value }}'
+          gh release create "v$version" "artifacts\CodeTwin-Setup-$version.exe" --target $env:GITHUB_SHA --title "CodeTwin $version" --generate-notes

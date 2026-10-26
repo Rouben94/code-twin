@@ -8,6 +8,7 @@
 AppId={{E4AC59C0-D9C3-43B7-8214-90B1E60DFE98}
 AppName=CodeTwin
 AppVersion={#Version}
+VersionInfoVersion={#Version}
 AppPublisher=CodeTwin
 AppPublisherURL=https://github.com/Rouben94/code-twin
 DefaultDirName={localappdata}\Programs\CodeTwin

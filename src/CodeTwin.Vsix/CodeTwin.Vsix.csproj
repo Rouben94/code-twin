@@ -41,6 +41,9 @@
     <Reference Include="CustomMarshalers" />
   </ItemGroup>
 
+  <!-- Feeds $(Version) from Directory.Build.props (or -p:Version) into source.extension.vsixmanifest. -->
+  <Target Name="GetVsixVersion" Returns="$(Version)" />
+
   <Target Name="PublishChatSidecar" BeforeTargets="AssignTargetPaths">
     <MSBuild Projects="..\CodeTwin.Chat\CodeTwin.Chat.csproj" Targets="Publish" Properties="Configuration=$(Configuration);NoBuild=true;PublishDir=$(ProjectDir)$(IntermediateOutputPath)chat\" />
     <ItemGroup>
