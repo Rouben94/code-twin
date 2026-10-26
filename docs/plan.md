@@ -88,6 +88,25 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
    repos; the same agent edits, builds and checks errors in the PLC project through the bridge
    and edits the other repos with normal file tools. Optional per-repo instructions stay in
    that repo (e.g. `.github/copilot-instructions.md`), never in the package.
+   Done:
+   - `initialize` took a single path. In a multi-repo session the working directory can be a
+     non-PLC repo; then it found no solution and fell back to the only open shell, which may hold
+     an unrelated project, without saying so.
+   - `initialize` now also takes `additionalPaths` (the session's other repos) and uses the one
+     TwinCAT solution found across all paths, de-duplicated; several solutions are an error that
+     asks for the `.sln`. The fallback to the only open shell stays, but its result
+     (`foundInPaths: false`) tells the agent to check that it is the right project.
+   - The `twincat` agent passes all repos of the session to `initialize`, edits the other repos with
+     file tools after reading their own instructions (`.github/copilot-instructions.md`, `AGENTS.md`),
+     and builds the PLC project before it reports. The package still holds no repo data.
+   - The chat window, the in-shell HTTP server and the `plc_*` tools are unchanged; the chat has no
+     `initialize` step.
+   - Verified in the Copilot app with a folder project holding a PLC repo and an HMI repo: one
+     session following the `twincat` agent rules started a shell through `initialize`
+     (`foundInPaths: true`), changed both repos, and the PLC project built without errors.
+   - Open: when a session selects the plugin agent `twincat:twincat` in the Copilot app, the app
+     does not offer the plugin's `codetwin` tools (`tools: ["*"]` in the agent does not help).
+     Copilot CLI with `--agent twincat:twincat` and app sessions without an agent have them.
 6. **Hardening** – permission modes (read / edit / build / online), blocked AMS Net IDs,
    no activate/login/start without confirmation, signed VSIX, tests.
    - Installer (one setup, per user, with uninstall): installs the VSIX into TcXaeShell and
