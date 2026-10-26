@@ -60,6 +60,7 @@ internal static class ShellDiscovery
             DiscoveryFile? discovery = JsonSerializer.Deserialize<DiscoveryFile>(stream, JsonSerializerOptions.Web);
             return discovery is { Pid: > 0, Endpoint: not null, Token: not null }
                 && Uri.TryCreate(discovery.Endpoint, UriKind.Absolute, out Uri? endpoint)
+                && IsLocalEndpoint(endpoint)
                 ? new ShellInstance(discovery.Pid, endpoint, discovery.Token)
                 : null;
         }
@@ -69,6 +70,12 @@ internal static class ShellDiscovery
             return null;
         }
     }
+
+    // The bridge sends the token to this endpoint, so it must be the shell's own loopback server.
+    internal static bool IsLocalEndpoint(Uri endpoint) =>
+        endpoint.Scheme == Uri.UriSchemeHttp
+        && endpoint.IsLoopback
+        && endpoint.AbsolutePath.StartsWith("/mcp", StringComparison.OrdinalIgnoreCase);
 
     private sealed record DiscoveryFile(int Pid, string? Endpoint, string? Token);
 }
