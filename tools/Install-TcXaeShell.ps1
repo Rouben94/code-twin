@@ -27,6 +27,11 @@ if (Get-Process TcXaeShell -ErrorAction SilentlyContinue) {
     throw 'Close TcXaeShell first.'
 }
 
+# Renaming fails while any file in the folder is in use, so a locked extension stays intact.
+$previous = "$target.previous"
+if (Test-Path $previous) { Remove-Item $previous -Recurse -Force }
+if (Test-Path $target) { Rename-Item -LiteralPath $target -NewName (Split-Path $previous -Leaf) }
+
 $enabled = "$extensionManager\EnabledExtensions"
 foreach ($subKey in 'EnabledExtensions', 'ExtensionTypes', 'ExtensionAutoUpdateEnrollment') {
     $key = "$extensionManager\$subKey"
@@ -35,7 +40,6 @@ foreach ($subKey in 'EnabledExtensions', 'ExtensionTypes', 'ExtensionAutoUpdateE
         Remove-ItemProperty $key -Name $name
     }
 }
-if (Test-Path $target) { Remove-Item $target -Recurse -Force }
 
 if (-not $Uninstall) {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -49,5 +53,6 @@ if (-not $Uninstall) {
     Set-ItemProperty $enabled -Name "$($identity.Id),$($identity.Version)" -Value "$target\"
 }
 
+if (Test-Path $previous) { Remove-Item $previous -Recurse -Force }
 Set-ItemProperty $extensionManager -Name ExtensionsChanged -Type QWord -Value ([DateTime]::UtcNow.ToFileTimeUtc())
 Write-Host ($(if ($Uninstall) { 'Uninstalled from' } else { 'Installed to' }) + " $target")

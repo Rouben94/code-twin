@@ -87,20 +87,48 @@ begin
   Result := WaitForShellClosed;
 end;
 
+// A child process occasionally fails to start right after files were installed (STATUS_DLL_INIT_FAILED); one retry is enough.
+function ExecHidden(const FileName, Params: String; var ResultCode: Integer): Boolean;
+begin
+  Result := Exec(FileName, Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if Result and (ResultCode = -1073741502) then
+  begin
+    Log('Retrying ' + FileName + ' after a startup failure');
+    Sleep(1000);
+    Result := Exec(FileName, Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
+end;
+
+function PowerShellQuote(Value: String): String;
+begin
+  StringChangeEx(Value, '''', '''''', True);
+  Result := '''' + Value + '''';
+end;
+
 procedure InstallExtension;
 var
   ResultCode: Integer;
+  OutputFile: String;
+  Output: AnsiString;
 begin
-  if not Exec('powershell.exe', ExpandConstant('-NoProfile -ExecutionPolicy Bypass -File "{app}\Install-TcXaeShell.ps1" -Vsix "{app}\CodeTwin.Vsix.vsix"'),
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode) or (ResultCode <> 0) then
-    SuppressibleMsgBox('Installing the extension into TwinCAT XAE Shell failed. Close the shell and run setup again.', mbError, MB_OK, IDOK);
+  OutputFile := ExpandConstant('{tmp}\Install-TcXaeShell.log');
+  if ExecHidden('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -Command "try { & ' +
+    PowerShellQuote(ExpandConstant('{app}\Install-TcXaeShell.ps1')) + ' -Vsix ' + PowerShellQuote(ExpandConstant('{app}\CodeTwin.Vsix.vsix')) +
+    ' } catch { $_ | Out-String | Set-Content -LiteralPath ' + PowerShellQuote(OutputFile) + '; exit 1 }"', ResultCode) and (ResultCode = 0) then
+    Exit;
+
+  if not LoadStringFromFile(OutputFile, Output) then
+    Output := SysErrorMessage(ResultCode);
+  Log('Installing the extension failed (' + IntToStr(ResultCode) + '): ' + String(Output));
+  SuppressibleMsgBox('Installing the extension into TwinCAT XAE Shell failed:' + #13#10#13#10 + Trim(String(Output)) + #13#10#13#10 +
+    'Close the shell and run setup again.', mbError, MB_OK, IDOK);
 end;
 
 function Copilot(const Arguments: String): Boolean;
 var
   ResultCode: Integer;
 begin
-  Result := Exec(ExpandConstant('{cmd}'), '/c copilot ' + Arguments, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+  Result := ExecHidden(ExpandConstant('{cmd}'), '/c copilot ' + Arguments, ResultCode) and (ResultCode = 0);
 end;
 
 // Copilot CLI and the Copilot app share the plugin registry; the plugin is loaded live from {app}.
