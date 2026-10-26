@@ -473,12 +473,35 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
     }
 #pragma warning restore GHCP001
 
-    private static bool IsTrusted(PermissionRequest request) => request switch
+    private bool IsTrusted(PermissionRequest request) => request switch
     {
         PermissionRequestMcp mcp => string.Equals(mcp.ServerName, McpServerName, StringComparison.Ordinal),
-        PermissionRequestRead => true,
+        PermissionRequestRead read => IsTrustedRead(read.Path, [SolutionFolder(sessionSolution), options.AgentsDirectory, options.SkillsDirectory]),
         _ => false,
     };
+
+    // Reads run without asking only inside the solution folder and the shipped agent and skills.
+    // Anything else, and every network path (opening one sends the Windows credentials), goes to the user.
+    internal static bool IsTrustedRead(string? path, IEnumerable<string?> trustedFolders)
+    {
+        if (string.IsNullOrEmpty(path) || !Path.IsPathFullyQualified(path))
+        {
+            return false;
+        }
+
+        string fullPath = Path.GetFullPath(path);
+        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return trustedFolders
+            .OfType<string>()
+            .Select(folder => Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder)))
+            .Any(folder => !folder.StartsWith(@"\\", StringComparison.Ordinal)
+                && (string.Equals(fullPath, folder, StringComparison.OrdinalIgnoreCase)
+                    || fullPath.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)));
+    }
 
     private static string Describe(PermissionRequest request) => request switch
     {

@@ -36,14 +36,14 @@ Requirements:
 
 The window hosts a WebView2 page (`src/CodeTwin.Vsix/ChatUi`) and starts the sidecar `chat\code-twin-chat.exe` (`src/CodeTwin.Chat`). The sidecar drives the Copilot CLI through the GitHub Copilot SDK. The VSIX ships its own copy of the `twincat` agent and skills, so the plugin is not needed. The sidecar connects Copilot straight to this shell's MCP server, with endpoint and token passed in by the extension.
 
-CodeTwin tool calls and file reads run without asking. Anything else, such as the PowerShell script of the InfoSys search, shell commands, file writes or URLs, shows an Allow/Deny card in the chat. **New chat** starts a fresh session. The sidecar starts when the window opens and stops with the shell.
+CodeTwin tool calls and reads inside the solution folder or the shipped agent and skills run without asking. Anything else, such as reads elsewhere, the PowerShell script of the InfoSys search, shell commands, file writes or URLs, shows an Allow/Deny card in the chat. Reads from network paths are never approved automatically. **New chat** starts a fresh session. The sidecar starts when the window opens and stops with the shell.
 
 Chats are saved by the Copilot CLI in its own session store (`%USERPROFILE%\.copilot\session-state`). The **history** button lists the CodeTwin chats of the open solution; pick one to reload it and continue, or delete it. A new chat shows the five most recent ones on its start page. The **lock** button starts a private chat; click it again to leave it and start a saved chat. A private chat is not listed and is deleted when you leave it, start another chat, switch chats or close the shell. Prompts of a private chat still go to GitHub Copilot.
 
 The bar under the message box picks the mode and the model, and shows usage:
 
 - **Mode**: Agent (default), Plan (the agent proposes a plan and waits for your approval before it edits) or Autopilot. Shift+Tab cycles the modes.
-- **Tool permissions** (at the bottom of the mode menu): Always ask (default) asks before shell commands, file edits and web access, while reads and the CodeTwin tools run directly. Approve all runs every tool without asking.
+- **Tool permissions** (at the bottom of the mode menu): Always ask (default) asks before shell commands, file edits, web access and reads outside the project, while project reads and the CodeTwin tools run directly. Approve all runs every tool without asking.
 - **Model**: every model your Copilot subscription offers, with its premium request multiplier and, where the model supports it, the reasoning effort. Mode, model and effort are remembered.
 - **Usage ring**: how full the context window is. Click it for this chat's token totals and AI credits, and your premium request quota with its reset date.
 

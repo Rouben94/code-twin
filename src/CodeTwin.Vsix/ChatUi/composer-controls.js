@@ -18,7 +18,7 @@
   ];
 
   const permissionLevels = [
-    { id: "ask", label: "Always ask", detail: "Asks before shell commands, file edits and web access. Reads and CodeTwin tools run directly." },
+    { id: "ask", label: "Always ask", detail: "Asks before shell commands, file edits, web access and reads outside the project. Project reads and CodeTwin tools run directly." },
     { id: "approveAll", label: "Approve all", detail: "Runs all tools without asking." },
   ];
 

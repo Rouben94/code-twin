@@ -57,9 +57,10 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      external clients.
    - The agent and skills ship inside the VSIX (`chat\agents`, `chat\skills`).
    - Each prompt carries a `<context>` block with the solution and the active POU.
-   - CodeTwin tools and reads are auto-approved; other permission requests are asked in the UI.
-     This uses the SDK's experimental permission API (GHCP001). The mode menu has a Tool
-     permissions submenu (Always ask, Approve all); Approve all approves every request.
+   - CodeTwin tools and reads inside the solution folder (and the shipped agent and skills) are
+     auto-approved; other permission requests, including reads elsewhere and every network path,
+     are asked in the UI. This uses the SDK's experimental permission API (GHCP001). The mode menu
+     has a Tool permissions submenu (Always ask, Approve all); Approve all approves every request
    - The composer has a mode picker (Agent, Plan, Autopilot), a model picker with reasoning effort,
      and a usage ring (context window, token totals, premium requests). Modes use the experimental
      `session.mode.set` RPC, because `MessageOptions.AgentMode` alone does not switch the session.
