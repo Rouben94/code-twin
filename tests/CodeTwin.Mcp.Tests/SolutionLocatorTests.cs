@@ -58,6 +58,15 @@ public sealed class SolutionLocatorTests : IDisposable
         Assert.Throws<ArgumentException>(() => SolutionLocator.Locate("repo"));
     }
 
+    [Theory]
+    [InlineData(@"\\server\share\repo")]
+    [InlineData(@"\\?\UNC\server\share\repo")]
+    [InlineData(@"\\.\pipe\repo")]
+    public void RejectsNetworkAndDevicePaths(string path)
+    {
+        Assert.Throws<ArgumentException>(() => SolutionLocator.Locate(path));
+    }
+
     [Fact]
     public void FindsTheOneSolutionAcrossTheRepositoriesOfASession()
     {

@@ -32,6 +32,12 @@ internal static partial class SolutionLocator
         }
 
         string fullPath = Path.GetFullPath(path);
+        if (fullPath.StartsWith(@"\\", StringComparison.Ordinal))
+        {
+            // Network and device paths are refused before any file access, which would send the Windows credentials to the host.
+            throw new ArgumentException($"Pass a path on a local drive, not '{path}'.");
+        }
+
         if (File.Exists(fullPath))
         {
             if (string.Equals(Path.GetExtension(fullPath), ".sln", StringComparison.OrdinalIgnoreCase))
