@@ -6,11 +6,10 @@
     <RootNamespace>CodeTwin.Mcp</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <!-- `dotnet publish -c Release` refreshes the framework-dependent single-file exe that the twincat plugin ships. -->
+    <!-- Framework-dependent single-file exe; the setup installs it into the twincat plugin's bin folder. -->
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <DebugType>embedded</DebugType>
-    <PublishDir>$(MSBuildThisFileDirectory)..\..\plugins\twincat\bin\</PublishDir>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="CodeTwin.Mcp.Tests" />

@@ -2,7 +2,18 @@
 
 AI engineering for TwinCAT: a Visual Studio / TwinCAT XAE Shell extension that lets AI agents read, edit and build TwinCAT projects through the Automation Interface.
 
-Build with `dotnet build CodeTwin.slnx -c Release`. Install into TwinCAT XAE Shell with `tools\Install-TcXaeShell.ps1`; details and Visual Studio install in [docs/spike.md](docs/spike.md).
+## Install
+
+Requirements: Windows x64, TwinCAT XAE Shell (TwinCAT 3.1.4026), the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) and [Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli) for the chat and the agent plugin.
+
+Close TcXaeShell and run `CodeTwin-Setup-<version>.exe`. It installs per user (no admin rights) into `%LOCALAPPDATA%\Programs\CodeTwin`:
+
+- the extension into TcXaeShell (through `tools\Install-TcXaeShell.ps1`),
+- the [TwinCAT agent plugin](#twincat-agent-plugin) with the `code-twin-mcp` bridge, registered with Copilot CLI and the Copilot app as a local marketplace (`copilot plugin marketplace add`, `copilot plugin install twincat@code-twin`).
+
+To update, run a newer setup. Uninstall from **Settings > Apps**; this removes the extension and the Copilot registration as well.
+
+Build the setup with `installer\Build-Setup.ps1` (needs the .NET 10 SDK, the Visual Studio SDK build tools and [Inno Setup 6](https://jrsoftware.org/isinfo.php)); it writes `artifacts\CodeTwin-Setup-<version>.exe`. For development, `dotnet build CodeTwin.slnx -c Release` and `tools\Install-TcXaeShell.ps1` deploy just the extension; details and Visual Studio install in [docs/spike.md](docs/spike.md).
 
 ## MCP server
 
@@ -53,14 +64,7 @@ The mascot Tick shows the agent state with its eye LEDs: green (RUN, ready), bli
 
 `plugins/twincat` is a Copilot CLI plugin with a `twincat` agent and skills for TwinCAT 3 PLC work: InfoSys search, naming, ST syntax, OOP and patterns, data types and memory, compiler errors, TcUnit and motion. The agent looks things up on Beckhoff InfoSys first (live search), then the web, and edits PLC code only through the CodeTwin MCP server. It never performs online actions (activate, login, download).
 
-Install from this repository's marketplace (or use a local clone path instead of `Rouben94/code-twin`):
-
-```powershell
-copilot plugin marketplace add Rouben94/code-twin
-copilot plugin install twincat@code-twin
-```
-
-That is the only setup step. The plugin starts its MCP server `codetwin` itself: `plugins/twincat/bin/code-twin-mcp.exe`, a stdio bridge that forwards the tool calls to the CodeTwin server in a running TwinCAT XAE Shell. It needs the .NET 10 runtime and the CodeTwin extension in TwinCAT XAE Shell.
+The setup installs and registers the plugin (see [Install](#install)); there is no other setup step. The plugin starts its MCP server `codetwin` itself: `bin\code-twin-mcp.exe` in the installed plugin, a stdio bridge that forwards the tool calls to the CodeTwin server in a running TwinCAT XAE Shell.
 
 The bridge adds one tool, `initialize`, which the agent calls first with the absolute path of the repository, folder, `.sln`, `.tsproj` or `.plcproj` it works on. It finds the TwinCAT solution, connects to the running shell that has it open (discovery files in `%LOCALAPPDATA%\CodeTwin\instances`), or starts TcXaeShell with it. A shell started this way is launched through Explorer, so it stays open when Copilot exits. Nothing about the repository is stored; the binding lives only as long as the Copilot session. When the shell restarts, the next tool call finds it again. If the path has no TwinCAT solution (Copilot started in an unrelated folder), `initialize` connects to the only shell that has a solution open and says so in its result. The `plc_*` tools fail until `initialize` succeeded, so a session never edits a project it was not pointed at. Network and device paths (`\\server\share`, `\\?\`) are refused; open the solution from a local drive.
 
@@ -77,7 +81,7 @@ If you registered the server manually before, remove that registration once, sin
 copilot mcp remove codetwin
 ```
 
-After changing `src/CodeTwin.Mcp`, refresh the shipped exe with `dotnet publish src\CodeTwin.Mcp -c Release` (writes to `plugins/twincat/bin`). Running Copilot sessions lock the exe; rename it to `code-twin-mcp.exe.old` first, new sessions then use the new exe.
+The plugin is loaded live from the install folder, so a new setup takes effect with the next Copilot session. Running Copilot sessions lock `code-twin-mcp.exe`; close them before updating.
 
 Use it with `copilot --agent twincat:twincat` or pick `twincat` in `/agent`. The fully qualified name avoids a clash with a user-level agent also called `twincat` (user agents win over plugin agents). Example prompts:
 
@@ -85,6 +89,6 @@ Use it with `copilot --agent twincat:twincat` or pick `twincat` in `/agent`. The
 - `Write TcUnit tests for FB_Valve.`
 - `What does compiler error C0077 mean?`
 
-The InfoSys search runs a PowerShell script from the plugin; approve it when asked. Update with `copilot plugin update twincat@code-twin`, remove with `copilot plugin uninstall twincat@code-twin`.
+The InfoSys search runs a PowerShell script from the plugin; approve it when asked.
 
 Licensed under [MPL-2.0](LICENSE).

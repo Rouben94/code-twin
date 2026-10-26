@@ -45,7 +45,7 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
    Test with Copilot CLI against a sample project.
 2. **Agent + skills** – own `twincat` agent: InfoSys first (live query), web second;
    own skills: naming, ST syntax, OOP/patterns, data types/memory, compiler errors,
-   TcUnit, motion. Packaged as a Copilot CLI plugin (marketplace in our repo).
+   TcUnit, motion. Packaged as a Copilot CLI plugin (local marketplace installed by the setup).
 3. **Chat window** – dockable WebView2 chat in the shell, backed by Copilot SDK/CLI sidecar
    with our MCP server + agent preloaded; context = current solution / active POU.
    Done:
@@ -131,11 +131,14 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      - In-shell server: constant-time token comparison.
      - No LLM credential handling: the monthly AI-credits reader (GitHub token, `gh auth token`)
        and the account auth RPC are removed; sign-in is delegated to `copilot login`.
-   - Installer decisions: Inno Setup, per user. Copilot CLI and app first; client registration kept
-     generic so Claude Code and Codex can follow. `code-twin-mcp` is built in CI and installed to
-     `%LOCALAPPDATA%\Programs\CodeTwin` (on the user `PATH`); the plugin is installed from a local
-     marketplace in the install folder. No build artifacts in git (the exe and `.github/plugin` go);
-     `tools\Install-TcXaeShell.ps1` stays and is called by the setup. Authenticode-sign setup and binaries.
+   - Installer, done (`installer\`): Inno Setup, per user, into `%LOCALAPPDATA%\Programs\CodeTwin`.
+     It calls `tools\Install-TcXaeShell.ps1` for the extension (and `-Uninstall` on uninstall),
+     checks for the .NET 10 runtime and a closed TcXaeShell, and registers Copilot CLI and app by
+     adding the install folder as the local marketplace `code-twin` (the plugin is loaded live from
+     there). `code-twin-mcp` sits in the plugin's `bin` folder, so `mcp.json` stays relative and no
+     `PATH` change is needed; later clients (Claude Code, Codex) get the absolute path.
+     `installer\Build-Setup.ps1` builds the VSIX, publishes the bridge and compiles the setup into
+     `artifacts\`. No build artifacts in git. Open: CI release build, Authenticode signing.
 7. **Beyond PLC code (System Manager)** – generic tree tools on ITcSmTreeItem
    (LookupTreeItem, CreateChild, ProduceXml/ConsumeXml, LinkVariables) plus domain skills:
    - I/O / EtherCAT: scan (guarded), add boxes/terminals, PDO config, variable linking
