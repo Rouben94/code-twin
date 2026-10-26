@@ -15,25 +15,6 @@ internal sealed class PlcTreeReader(DTE dte)
 {
     private const string PlcConfigurationPath = "TIPC";
 
-    public IReadOnlyList<PlcTreeNode> ReadPlcTrees()
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-
-        List<PlcTreeNode> trees = [];
-        foreach (Project project in dte.Solution.Projects)
-        {
-            if (project.Object is not ITcSysManager sysManager)
-            {
-                continue;
-            }
-
-            ITcSmTreeItem plcConfiguration = sysManager.LookupTreeItem(PlcConfigurationPath);
-            trees.Add(new PlcTreeNode(project.Name, "TwinCAT project", [ReadItem(plcConfiguration)]));
-        }
-
-        return trees;
-    }
-
     public IReadOnlyList<PlcElement> ListElements()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -238,19 +219,6 @@ internal sealed class PlcTreeReader(DTE dte)
         SolutionBuild solutionBuild = dte.Solution.SolutionBuild;
         solutionBuild.Build(WaitForBuildToFinish: true);
         return solutionBuild.LastBuildInfo == 0;
-    }
-
-    private static PlcTreeNode ReadItem(ITcSmTreeItem item)
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-
-        List<PlcTreeNode> children = [];
-        foreach (ITcSmTreeItem child in item)
-        {
-            children.Add(ReadItem(child));
-        }
-
-        return new PlcTreeNode(item.Name, DescribeItemType(item), children);
     }
 
     private static void ReadElements(string projectName, ITcSmTreeItem item, string path, ICollection<PlcElement> elements)

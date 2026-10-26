@@ -4,13 +4,61 @@
   <Extern href="vsshlids.h" />
 
   <Commands package="guidCodeTwinPackage">
+    <Menus>
+      <Menu guid="guidCodeTwinCommandSet" id="menuidCodeTwin" priority="0x0100" type="Menu">
+        <Parent guid="guidCodeTwinCommandSet" id="grpidToolsMenu" />
+        <Strings>
+          <ButtonText>CodeTwin</ButtonText>
+        </Strings>
+      </Menu>
+    </Menus>
+
+    <Groups>
+      <Group guid="guidCodeTwinCommandSet" id="grpidToolsMenu" priority="0x0100">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_MENU_TOOLS" />
+      </Group>
+      <Group guid="guidCodeTwinCommandSet" id="grpidWindows" priority="0x0100">
+        <Parent guid="guidCodeTwinCommandSet" id="menuidCodeTwin" />
+      </Group>
+      <Group guid="guidCodeTwinCommandSet" id="grpidHelp" priority="0x0200">
+        <Parent guid="guidCodeTwinCommandSet" id="menuidCodeTwin" />
+      </Group>
+      <Group guid="guidCodeTwinCommandSet" id="grpidAbout" priority="0x0300">
+        <Parent guid="guidCodeTwinCommandSet" id="menuidCodeTwin" />
+      </Group>
+    </Groups>
+
     <Buttons>
       <Button guid="guidCodeTwinCommandSet" id="cmdidShowChat" priority="0x0100" type="Button">
-        <Parent guid="guidSHLMainMenu" id="IDG_VS_WNDO_OTRWNDWS1" />
+        <Parent guid="guidCodeTwinCommandSet" id="grpidWindows" />
         <Strings>
-          <ButtonText>CodeTwin Chat</ButtonText>
-          <CanonicalName>.View.CodeTwinChat</CanonicalName>
-          <LocCanonicalName>.View.CodeTwinChat</LocCanonicalName>
+          <ButtonText>Chat</ButtonText>
+          <CanonicalName>.Tools.CodeTwin.Chat</CanonicalName>
+          <LocCanonicalName>.Tools.CodeTwin.Chat</LocCanonicalName>
+        </Strings>
+      </Button>
+      <Button guid="guidCodeTwinCommandSet" id="cmdidDocumentation" priority="0x0100" type="Button">
+        <Parent guid="guidCodeTwinCommandSet" id="grpidHelp" />
+        <Strings>
+          <ButtonText>Documentation</ButtonText>
+          <CanonicalName>.Tools.CodeTwin.Documentation</CanonicalName>
+          <LocCanonicalName>.Tools.CodeTwin.Documentation</LocCanonicalName>
+        </Strings>
+      </Button>
+      <Button guid="guidCodeTwinCommandSet" id="cmdidReportBug" priority="0x0200" type="Button">
+        <Parent guid="guidCodeTwinCommandSet" id="grpidHelp" />
+        <Strings>
+          <ButtonText>Report a Bug...</ButtonText>
+          <CanonicalName>.Tools.CodeTwin.ReportBug</CanonicalName>
+          <LocCanonicalName>.Tools.CodeTwin.ReportBug</LocCanonicalName>
+        </Strings>
+      </Button>
+      <Button guid="guidCodeTwinCommandSet" id="cmdidAbout" priority="0x0100" type="Button">
+        <Parent guid="guidCodeTwinCommandSet" id="grpidAbout" />
+        <Strings>
+          <ButtonText>About CodeTwin</ButtonText>
+          <CanonicalName>.Tools.CodeTwin.About</CanonicalName>
+          <LocCanonicalName>.Tools.CodeTwin.About</LocCanonicalName>
         </Strings>
       </Button>
     </Buttons>
@@ -20,6 +68,14 @@
     <GuidSymbol name="guidCodeTwinPackage" value="{4a8e2c71-9d3b-4f56-8e0a-1c7b5d9f2e63}" />
     <GuidSymbol name="guidCodeTwinCommandSet" value="{8f3a1d6c-2b7e-4c95-a0d4-6e1f9b3c7a28}">
       <IDSymbol name="cmdidShowChat" value="0x0100" />
+      <IDSymbol name="cmdidDocumentation" value="0x0101" />
+      <IDSymbol name="cmdidReportBug" value="0x0102" />
+      <IDSymbol name="cmdidAbout" value="0x0103" />
+      <IDSymbol name="menuidCodeTwin" value="0x1000" />
+      <IDSymbol name="grpidToolsMenu" value="0x1100" />
+      <IDSymbol name="grpidWindows" value="0x1101" />
+      <IDSymbol name="grpidHelp" value="0x1102" />
+      <IDSymbol name="grpidAbout" value="0x1103" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>

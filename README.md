@@ -39,7 +39,7 @@ Copilot CLI and other stdio MCP clients connect through the `code-twin-mcp` brid
 
 ## Chat window
 
-**View > Other Windows > CodeTwin Chat** (command `View.CodeTwinChat`) opens a dockable chat with the `twincat` agent inside the shell. It works on the solution open in this shell. Each prompt carries the solution and the active POU (the editor that has focus), so there is no `initialize` step. The header shows that context.
+**Tools > CodeTwin > Chat** (command `Tools.CodeTwin.Chat`) opens a dockable chat with the `twincat` agent inside the shell. It works on the solution open in this shell. Each prompt carries the solution and the active POU (the editor that has focus), so there is no `initialize` step. The header shows that context.
 
 Requirements:
 

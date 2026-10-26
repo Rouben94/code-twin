@@ -143,6 +143,9 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      to `main`; every push to `main` releases `v<MAJOR>.<MINOR>.<PATCH>` with the setup attached
      (MAJOR.MINOR from `Directory.Build.props`, PATCH automatic). Open: signing, planned with the
      free SignPath Foundation OSS certificate once the repository is public and has a release.
+   - Tools > CodeTwin menu, done: Chat, Documentation, Report a Bug, About (version, MCP endpoint).
+     The spike's PLC tree window is removed. Later: a Tools > Options page once there are settings,
+     and an update check against the latest release once the repository is public.
 7. **Beyond PLC code (System Manager)** – generic tree tools on ITcSmTreeItem
    (LookupTreeItem, CreateChild, ProduceXml/ConsumeXml, LinkVariables) plus domain skills:
    - I/O / EtherCAT: scan (guarded), add boxes/terminals, PDO config, variable linking
