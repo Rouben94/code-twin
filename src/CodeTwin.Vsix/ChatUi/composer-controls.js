@@ -19,7 +19,7 @@
 
   const permissionLevels = [
     { id: "ask", label: "Always ask", detail: "Asks before shell commands, file edits, web access and reads outside the project. Project reads and CodeTwin tools run directly." },
-    { id: "approveAll", label: "Approve all", detail: "Runs all tools without asking." },
+    { id: "approveAll", label: "Approve all", detail: "Runs all tools without asking, until you start or open another chat." },
   ];
 
   const planActions = {
@@ -35,7 +35,9 @@
 
   let models = [];
   let mode = modes.some((m) => m.id === storage.get("mode")) ? storage.get("mode") : "interactive";
-  let permissions = permissionLevels.some((p) => p.id === storage.get("permissions")) ? storage.get("permissions") : "ask";
+  // Not remembered: every chat starts with "Always ask". Clears the value older versions stored.
+  let permissions = "ask";
+  storage.set("permissions", null);
   let model = storage.get("model");
   let effort = storage.get("effort");
   let context = { current: 0, limit: 0 };
@@ -152,7 +154,6 @@
 
   const setPermissions = (id) => {
     permissions = id;
-    storage.set("permissions", permissions);
     showMode();
     post({ type: "setPermissions", permissions });
   };
@@ -388,6 +389,8 @@
   document.addEventListener("chatreset", () => {
     closeMenu();
     resetSessionUsage();
+    permissions = "ask";
+    showMode();
   });
 
   prompt.addEventListener("keydown", (event) => {

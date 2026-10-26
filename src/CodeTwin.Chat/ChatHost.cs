@@ -155,6 +155,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
         privateChat = isPrivate;
+        approveAll = false;
     }
 
     public async Task PublishSessionsAsync(string? solution, CancellationToken cancellationToken)
@@ -191,6 +192,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyn
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
         privateChat = false;
+        approveAll = false;
 
         session = await client.ResumeSessionAsync(
             id,

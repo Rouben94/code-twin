@@ -61,6 +61,7 @@ Clients: in-shell chat (direct HTTP), Copilot CLI, Copilot Desktop, Claude Deskt
      auto-approved; other permission requests, including reads elsewhere and every network path,
      are asked in the UI. This uses the SDK's experimental permission API (GHCP001). The mode menu
      has a Tool permissions submenu (Always ask, Approve all); Approve all approves every request
+     and is reset to Always ask with every new or resumed chat.
    - The composer has a mode picker (Agent, Plan, Autopilot), a model picker with reasoning effort,
      and a usage ring (context window, token totals, premium requests). Modes use the experimental
      `session.mode.set` RPC, because `MessageOptions.AgentMode` alone does not switch the session.
