@@ -237,13 +237,13 @@ const handlers = {
     }
   },
   session: ({ private: isPrivate }) => {
-    document.body.classList.toggle("private", Boolean(isPrivate));
+    setPrivate(Boolean(isPrivate));
     if (thread.querySelector(".message.assistant")) {
       append(element("div", "divider", "New session"));
     }
   },
   history: ({ items }) => {
-    document.body.classList.remove("private");
+    setPrivate(false);
     replayHistory(items || []);
   },
   delta: ({ text }) => renderReply(replyText + (text || "")),
@@ -345,6 +345,15 @@ thread.addEventListener("click", async (event) => {
   setTimeout(() => { button.textContent = "Copy"; }, 1500);
 });
 
+const privateButton = document.getElementById("private-chat");
+
+const setPrivate = (isPrivate) => {
+  document.body.classList.toggle("private", isPrivate);
+  privateButton.setAttribute("aria-pressed", isPrivate ? "true" : "false");
+  privateButton.title = isPrivate ? "Leave private chat (it is deleted) and start a saved chat" : "New private chat (not saved)";
+  privateButton.setAttribute("aria-label", privateButton.title);
+};
+
 const resetThread = () => {
   thread.replaceChildren();
   welcome.hidden = false;
@@ -360,7 +369,7 @@ const resetThread = () => {
 const startNewChat = (isPrivate) => {
   post({ type: "newChat", private: isPrivate });
   resetThread();
-  document.body.classList.toggle("private", isPrivate);
+  setPrivate(isPrivate);
   prompt.focus();
 };
 
@@ -392,7 +401,7 @@ const replayHistory = (items) => {
 };
 
 document.getElementById("new-chat").addEventListener("click", () => startNewChat(false));
-document.getElementById("private-chat").addEventListener("click", () => startNewChat(true));
+privateButton.addEventListener("click", () => startNewChat(!document.body.classList.contains("private")));
 
 window.addEventListener("focus", () => post({ type: "getContext" }));
 
