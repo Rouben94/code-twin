@@ -13,7 +13,6 @@
     <CopyBuildOutputToOutputDirectory>true</CopyBuildOutputToOutputDirectory>
     <CopyOutputSymbolsToOutputDirectory>true</CopyOutputSymbolsToOutputDirectory>
     <DeployExtension>false</DeployExtension>
-    <TCatSysManagerLibPath Condition="'$(TCatSysManagerLibPath)' == ''">$(WINDIR)\Microsoft.NET\assembly\GAC_MSIL\TCatSysManagerLib\v4.0_3.4.0.0__180016cd49e5e8c3\TCatSysManagerLib.dll</TCatSysManagerLibPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,12 +38,7 @@
     <Reference Include="WindowsBase" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Design" />
-    <!-- Installed Beckhoff PIA; types are embedded, the DLL is never shipped. -->
-    <Reference Include="TCatSysManagerLib">
-      <HintPath>$(TCatSysManagerLibPath)</HintPath>
-      <EmbedInteropTypes>true</EmbedInteropTypes>
-      <Private>false</Private>
-    </Reference>
+    <Reference Include="CustomMarshalers" />
   </ItemGroup>
 
   <Target Name="PublishChatSidecar" BeforeTargets="AssignTargetPaths">

@@ -23,10 +23,9 @@ dotnet build CodeTwin.slnx -c Release   # -> src\CodeTwin.Vsix\bin\Release\net48
   IDE provides those assemblies. The same binary runs in VS 2026.
 - `UseCodebase=true` is required. Without a `CodeBase` in the pkgdef the shell fails with
   `FileNotFoundException: CodeTwin.Vsix` because it does not probe per-user extension folders.
-- Beckhoff interop: `TCatSysManagerLib` is referenced from the GAC
-  (`%WINDIR%\Microsoft.NET\assembly\GAC_MSIL\TCatSysManagerLib\v4.0_3.4.0.0__180016cd49e5e8c3`)
-  with `EmbedInteropTypes=true`, `Private=false`. Override the path with
-  `-p:TCatSysManagerLibPath=...`. Nothing from Beckhoff is committed or shipped.
+- Beckhoff interop: the few Automation Interface interfaces CodeTwin uses are declared in
+  `TwinCatAutomation.cs` (IIDs and vtable order from `TCatSysManagerLib`), so the build needs
+  no Beckhoff assembly. Nothing from Beckhoff is committed or shipped.
 
 ## Manifest
 

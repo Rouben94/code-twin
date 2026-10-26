@@ -7,7 +7,6 @@ using System.Linq;
 using CodeTwin.Core;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
-using TCatSysManagerLib;
 
 namespace CodeTwin.Vsix;
 
@@ -195,7 +194,7 @@ internal sealed class PlcTreeReader(DTE dte)
         ITcSmTreeItem parent = FindItem(request.ParentPath)
             ?? throw new KeyNotFoundException($"PLC element '{request.ParentPath}' was not found.");
 
-        const IECLANGUAGETYPES Language = IECLANGUAGETYPES.IECLANGUAGE_ST;
+        const int Language = 1; // IECLANGUAGE_ST
         (int subType, object? info) = request.Kind switch
         {
             PlcElementKind.Folder => (601, null),
@@ -357,9 +356,9 @@ internal sealed class PlcTreeReader(DTE dte)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
-        var itemType = (TREEITEMTYPES)item.ItemType;
-        string typeName = Enum.IsDefined(typeof(TREEITEMTYPES), itemType)
-            ? StripPrefix(itemType.ToString(), "TREEITEMTYPE_")
+        var itemType = (PlcItemType)item.ItemType;
+        string typeName = Enum.IsDefined(typeof(PlcItemType), itemType)
+            ? itemType.ToString()
             : item.ItemType.ToString(CultureInfo.InvariantCulture);
 
         try
