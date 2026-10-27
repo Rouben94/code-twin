@@ -241,11 +241,12 @@ public sealed class InProcessMcpServer : IDisposable
             return ToolError($"{exception.GetType().Name}: {exception.Message}");
         }
 
-        string text = JsonSerializer.Serialize(content);
+        JsonElement structured = JsonSerializer.SerializeToElement(content);
         return new
         {
-            content = new[] { new { type = "text", text } },
-            structuredContent = content,
+            content = new[] { new { type = "text", text = structured.GetRawText() } },
+            // MCP requires structuredContent to be an object; clients that validate it (Claude Code) reject a bare array.
+            structuredContent = structured.ValueKind == JsonValueKind.Object ? structured : (object)new { items = structured },
         };
     }
 

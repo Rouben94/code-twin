@@ -37,7 +37,9 @@ public sealed class InProcessMcpServerTests
             name = "plc_list_elements",
             arguments = new { },
         });
-        Assert.Contains("MAIN", list.GetProperty("result").GetProperty("structuredContent").GetRawText());
+        JsonElement listed = list.GetProperty("result").GetProperty("structuredContent");
+        Assert.Equal(JsonValueKind.Object, listed.ValueKind);
+        Assert.Contains("MAIN", listed.GetProperty("items").GetRawText());
 
         JsonElement read = await SendAsync(client, 3, "tools/call", new
         {
@@ -244,7 +246,8 @@ public sealed class InProcessMcpServerTests
         Assert.Equal("C0077", buildResult.GetProperty("Diagnostics")[0].GetProperty("Code").GetString());
 
         JsonElement errors = await SendAsync(client, 2, "tools/call", new { name = "plc_get_errors", arguments = new { } });
-        Assert.Equal("error", errors.GetProperty("result").GetProperty("structuredContent")[0].GetProperty("Severity").GetString());
+        Assert.Equal("error", errors.GetProperty("result").GetProperty("structuredContent").GetProperty("items")[0].GetProperty("Severity").GetString());
+        Assert.StartsWith("[", errors.GetProperty("result").GetProperty("content")[0].GetProperty("text").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]
