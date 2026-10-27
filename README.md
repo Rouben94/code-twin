@@ -46,4 +46,33 @@ Then just ask, for example:
 
 More details, and how to build CodeTwin: [docs/development.md](docs/development.md).
 
+## What is supported
+
+Supported today:
+
+- Listing, searching and reading PLC elements
+- Changing Structured Text code (declaration and implementation)
+- Creating folders, programs, function blocks, functions, methods, properties, structs, enums and GVLs
+- Building the solution and fixing compiler errors and warnings
+- Writing TcUnit tests (running them is up to you)
+- Several solutions or repositories open at the same time, each in its own shell
+- Clients: CodeTwin Chat, Copilot CLI and the Copilot app
+- TwinCAT 3.1.4026
+
+Not supported yet:
+
+- Deleting, renaming or moving PLC elements
+- Creating interfaces, unions and aliases
+- Graphical languages (FBD, LD, SFC, CFC)
+- Visualizations (TwinCAT HMI, PLC visualizations, web visu)
+- I/O tree, devices and EtherCAT configuration
+- Motion (NC axes) and TwinCAT Safety configuration
+- Adding or changing library references
+- Activating the configuration, logging in, downloading and online changes
+- Running TcUnit tests
+- Clients: Claude Code, VS Code, Cursor, Codex CLI and Claude Desktop
+- TwinCAT 3.1.4024
+
+More is coming, and this list is updated as features are added.
+
 Licensed under [MPL-2.0](LICENSE).
