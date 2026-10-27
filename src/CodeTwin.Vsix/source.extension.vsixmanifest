@@ -5,6 +5,7 @@
     <DisplayName>CodeTwin</DisplayName>
     <Description xml:space="preserve">AI engineering for TwinCAT: lets AI agents read, edit and build TwinCAT projects through the Automation Interface.</Description>
     <MoreInfo>https://github.com/Rouben94/code-twin</MoreInfo>
+    <Icon>codetwin-128.png</Icon>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.IntegratedShell" Version="[17.0,19.0)">

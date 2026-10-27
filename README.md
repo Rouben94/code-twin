@@ -1,4 +1,9 @@
-# CodeTwin
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/codetwin-logo-dark.svg">
+    <img src="assets/codetwin-logo-light.svg" alt="CodeTwin" width="480">
+  </picture>
+</h1>
 
 AI engineering for TwinCAT: AI agents read, edit and build your TwinCAT PLC code in TwinCAT XAE Shell.
 

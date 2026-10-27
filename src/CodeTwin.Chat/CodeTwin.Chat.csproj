@@ -9,6 +9,7 @@
     <SelfContained>false</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <DebugType>embedded</DebugType>
+    <ApplicationIcon>..\..\assets\icons\codetwin.ico</ApplicationIcon>
     <!-- The sidecar drives the Copilot CLI the user already installed and logged in to, instead of bundling a ~250 MB runtime. -->
     <CopilotSkipCliDownload>true</CopilotSkipCliDownload>
   </PropertyGroup>

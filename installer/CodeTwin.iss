@@ -19,7 +19,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputBaseFilename=CodeTwin-Setup-{#Version}
 UninstallDisplayName=CodeTwin
+UninstallDisplayIcon={app}\codetwin.ico
+SetupIconFile=..\assets\icons\codetwin.ico
 WizardStyle=modern
+WizardSmallImageFile=..\assets\icons\codetwin-64.png,..\assets\icons\codetwin-128.png
 Compression=lzma2
 SolidCompression=yes
 
@@ -31,6 +34,7 @@ Type: filesandordirs; Name: "{app}\plugins"
 Source: "..\src\CodeTwin.Vsix\bin\Release\net48\CodeTwin.Vsix.vsix"; DestDir: "{app}"
 Source: "..\tools\Install-TcXaeShell.ps1"; DestDir: "{app}"
 Source: "..\LICENSE"; DestDir: "{app}"
+Source: "..\assets\icons\codetwin.ico"; DestDir: "{app}"
 Source: "marketplace.json"; DestDir: "{app}\.github\plugin"
 Source: "..\plugins\twincat\*"; Excludes: "\bin\*"; DestDir: "{app}\plugins\twincat"; Flags: recursesubdirs
 Source: "..\artifacts\mcp\code-twin-mcp.exe"; DestDir: "{app}\plugins\twincat\bin"

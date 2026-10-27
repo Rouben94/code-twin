@@ -28,6 +28,7 @@
   <ItemGroup>
     <VSCTCompile Include="CodeTwinPackage.vsct" ResourceName="Menus.ctmenu" />
     <Content Include="ChatUi\**" IncludeInVSIX="true" />
+    <Content Include="..\..\assets\icons\codetwin-128.png" Link="codetwin-128.png" IncludeInVSIX="true" />
     <Content Include="..\..\plugins\twincat\com.github.copilot\agents\*.md" Link="chat\agents\%(Filename)%(Extension)" IncludeInVSIX="true" VSIXSubPath="chat\agents" />
     <Content Include="..\..\plugins\twincat\skills\**" Link="chat\skills\%(RecursiveDir)%(Filename)%(Extension)" IncludeInVSIX="true" VSIXSubPath="chat\skills\%(RecursiveDir)" />
   </ItemGroup>

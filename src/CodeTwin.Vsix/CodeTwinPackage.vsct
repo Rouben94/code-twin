@@ -31,6 +31,7 @@
     <Buttons>
       <Button guid="guidCodeTwinCommandSet" id="cmdidShowChat" priority="0x0100" type="Button">
         <Parent guid="guidCodeTwinCommandSet" id="grpidWindows" />
+        <Icon guid="guidCodeTwinImages" id="imgLogo" />
         <Strings>
           <ButtonText>Chat</ButtonText>
           <CanonicalName>.Tools.CodeTwin.Chat</CanonicalName>
@@ -62,6 +63,11 @@
         </Strings>
       </Button>
     </Buttons>
+
+    <!-- A bitmap compiled into the command table: TcXaeShell reads image manifests only from its own install folder, not from per-user extensions. -->
+    <Bitmaps>
+      <Bitmap guid="guidCodeTwinImages" href="..\..\assets\icons\codetwin-16.png" usedList="imgLogo" />
+    </Bitmaps>
   </Commands>
 
   <Symbols>
@@ -76,6 +82,9 @@
       <IDSymbol name="grpidWindows" value="0x1101" />
       <IDSymbol name="grpidHelp" value="0x1102" />
       <IDSymbol name="grpidAbout" value="0x1103" />
+    </GuidSymbol>
+    <GuidSymbol name="guidCodeTwinImages" value="{b6d3f2a8-71c4-4e9b-8d05-3a9e6c1f4b72}">
+      <IDSymbol name="imgLogo" value="1" />
     </GuidSymbol>
   </Symbols>
 </CommandTable>
