@@ -34,6 +34,13 @@ To update, run a newer setup. To uninstall, use **Settings > Apps**.
 
 ## Use
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/chat-dark.png">
+    <img src="assets/chat-light.png" alt="CodeTwin Chat in TwinCAT XAE Shell" width="720">
+  </picture>
+</p>
+
 - **In the shell:** open your solution, then **Tools > CodeTwin > Chat**.
 - **In Copilot CLI:** run `copilot --agent twincat:twincat` in your project folder.
 - **In the Copilot app:** open your project folder and ask it to follow the `twincat` agent.
