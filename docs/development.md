@@ -83,7 +83,7 @@ If you registered the server manually before, remove that registration once, sin
 copilot mcp remove codetwin
 ```
 
-The plugin is loaded live from the install folder, so a new setup takes effect with the next Copilot session. Running Copilot sessions lock `code-twin-mcp.exe`; close them before updating.
+The plugin is loaded live from the install folder, so a new setup takes effect with the next Copilot session. Running Copilot sessions lock `code-twin-mcp.exe`; the setup asks you to close them.
 
 Use it with `copilot --agent twincat:twincat` or pick `twincat` in `/agent`. The fully qualified name avoids a clash with a user-level agent also called `twincat` (user agents win over plugin agents). Example prompts:
 

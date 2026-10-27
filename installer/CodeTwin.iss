@@ -22,6 +22,8 @@ UninstallDisplayName=CodeTwin
 UninstallDisplayIcon={app}\codetwin.ico
 SetupIconFile=..\assets\icons\codetwin.ico
 WizardStyle=modern
+; Restart Manager would shut down code-twin-mcp inside running Copilot sessions and break the processes setup starts afterwards (0xC0000142); setup asks the user to close them instead.
+CloseApplications=no
 WizardSmallImageFile=..\assets\icons\codetwin-64.png,..\assets\icons\codetwin-128.png
 Compression=lzma2
 SolidCompression=yes
@@ -47,23 +49,30 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Fil
 Type: filesandordirs; Name: "{app}"
 
 [Code]
-function ShellRunning: Boolean;
+function ProcessRunning(const ImageName: String): Boolean;
 var
   ResultCode: Integer;
 begin
-  Result := Exec(ExpandConstant('{cmd}'), '/c tasklist /FI "IMAGENAME eq TcXaeShell.exe" /NH | find /I "TcXaeShell.exe"',
+  Result := Exec(ExpandConstant('{cmd}'), '/c tasklist /FI "IMAGENAME eq ' + ImageName + '" /NH | find /I "' + ImageName + '"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
-function WaitForShellClosed: Boolean;
+function WaitForClosed(const ImageName, Message: String): Boolean;
 begin
   Result := True;
-  while ShellRunning do
-    if SuppressibleMsgBox('Close TwinCAT XAE Shell, then click Retry.', mbError, MB_RETRYCANCEL, IDCANCEL) = IDCANCEL then
+  while ProcessRunning(ImageName) do
+    if SuppressibleMsgBox(Message + ', then click Retry.', mbError, MB_RETRYCANCEL, IDCANCEL) = IDCANCEL then
     begin
       Result := False;
       Exit;
     end;
+end;
+
+// code-twin-mcp.exe is locked while a Copilot session uses the plugin.
+function WaitForClients: Boolean;
+begin
+  Result := WaitForClosed('TcXaeShell.exe', 'Close TwinCAT XAE Shell')
+    and WaitForClosed('code-twin-mcp.exe', 'Close all Copilot sessions that use CodeTwin (Copilot CLI and the Copilot app)');
 end;
 
 function InitializeSetup: Boolean;
@@ -80,27 +89,15 @@ end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  if WaitForShellClosed then
+  if WaitForClients then
     Result := ''
   else
-    Result := 'TwinCAT XAE Shell is still running.';
+    Result := 'TwinCAT XAE Shell or a Copilot session using CodeTwin is still running.';
 end;
 
 function InitializeUninstall: Boolean;
 begin
-  Result := WaitForShellClosed;
-end;
-
-// A child process occasionally fails to start right after files were installed (STATUS_DLL_INIT_FAILED); one retry is enough.
-function ExecHidden(const FileName, Params: String; var ResultCode: Integer): Boolean;
-begin
-  Result := Exec(FileName, Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  if Result and (ResultCode = -1073741502) then
-  begin
-    Log('Retrying ' + FileName + ' after a startup failure');
-    Sleep(1000);
-    Result := Exec(FileName, Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  end;
+  Result := WaitForClients;
 end;
 
 function PowerShellQuote(Value: String): String;
@@ -116,9 +113,9 @@ var
   Output: AnsiString;
 begin
   OutputFile := ExpandConstant('{tmp}\Install-TcXaeShell.log');
-  if ExecHidden('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -Command "try { & ' +
+  if Exec('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -Command "try { & ' +
     PowerShellQuote(ExpandConstant('{app}\Install-TcXaeShell.ps1')) + ' -Vsix ' + PowerShellQuote(ExpandConstant('{app}\CodeTwin.Vsix.vsix')) +
-    ' } catch { $_ | Out-String | Set-Content -LiteralPath ' + PowerShellQuote(OutputFile) + '; exit 1 }"', ResultCode) and (ResultCode = 0) then
+    ' } catch { $_ | Out-String | Set-Content -LiteralPath ' + PowerShellQuote(OutputFile) + '; exit 1 }"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
     Exit;
 
   if not LoadStringFromFile(OutputFile, Output) then
@@ -132,7 +129,7 @@ function Copilot(const Arguments: String): Boolean;
 var
   ResultCode: Integer;
 begin
-  Result := ExecHidden(ExpandConstant('{cmd}'), '/c copilot ' + Arguments, ResultCode) and (ResultCode = 0);
+  Result := Exec(ExpandConstant('{cmd}'), '/c copilot ' + Arguments, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
 end;
 
 // Copilot CLI and the Copilot app share the plugin registry; the plugin is loaded live from {app}.
