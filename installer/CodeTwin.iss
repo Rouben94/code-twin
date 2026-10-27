@@ -116,7 +116,13 @@ begin
   if Exec('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -Command "try { & ' +
     PowerShellQuote(ExpandConstant('{app}\Install-TcXaeShell.ps1')) + ' -Vsix ' + PowerShellQuote(ExpandConstant('{app}\CodeTwin.Vsix.vsix')) +
     ' } catch { $_ | Out-String | Set-Content -LiteralPath ' + PowerShellQuote(OutputFile) + '; exit 1 }"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0) then
+  begin
+    // A shell started during the installation read the extension state before the script flagged it as changed.
+    if ProcessRunning('TcXaeShell.exe') then
+      SuppressibleMsgBox('TwinCAT XAE Shell was started during the installation and has not loaded CodeTwin. ' +
+        'Close it completely and start it again.', mbInformation, MB_OK, IDOK);
     Exit;
+  end;
 
   if not LoadStringFromFile(OutputFile, Output) then
     Output := SysErrorMessage(ResultCode);

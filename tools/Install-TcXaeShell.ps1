@@ -17,7 +17,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-if (-not $Vsix) { $Vsix = Join-Path $PSScriptRoot '..\src\CodeTwin.Vsix\bin\Release\net48\CodeTwin.Vsix.vsix' }
+if (-not $Vsix) {
+    # Next to the script in the install folder, else the Release build output in the source tree.
+    $Vsix = Join-Path $PSScriptRoot 'CodeTwin.Vsix.vsix'
+    if (-not (Test-Path $Vsix)) { $Vsix = Join-Path $PSScriptRoot '..\src\CodeTwin.Vsix\bin\Release\net48\CodeTwin.Vsix.vsix' }
+}
 
 $hive = '17.0_IsoShell'
 $extensionManager = "HKCU:\Software\Beckhoff\TcXaeShell\$hive\ExtensionManager"
@@ -56,3 +60,8 @@ if (-not $Uninstall) {
 if (Test-Path $previous) { Remove-Item $previous -Recurse -Force }
 Set-ItemProperty $extensionManager -Name ExtensionsChanged -Type QWord -Value ([DateTime]::UtcNow.ToFileTimeUtc())
 Write-Host ($(if ($Uninstall) { 'Uninstalled from' } else { 'Installed to' }) + " $target")
+
+# A shell started while this script ran read the extension state before ExtensionsChanged was set.
+if (Get-Process TcXaeShell -ErrorAction SilentlyContinue) {
+    Write-Warning 'TcXaeShell was started during the installation. Close it completely and start it again to apply the change.'
+}
