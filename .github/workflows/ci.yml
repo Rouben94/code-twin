@@ -23,11 +23,11 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
@@ -59,7 +59,7 @@ jobs:
       - name: Build setup
         run: installer\Build-Setup.ps1 -Version ${{ steps.version.outputs.value }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: CodeTwin-Setup-${{ steps.version.outputs.value }}
           path: artifacts/CodeTwin-Setup-*.exe
