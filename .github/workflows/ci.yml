@@ -72,3 +72,8 @@ jobs:
         run: |
           $version = '${{ steps.version.outputs.value }}'
           gh release create "v$version" "artifacts\CodeTwin-Setup-$version.exe" --target $env:GITHUB_SHA --title "CodeTwin $version" --generate-notes
+
+      # The runner waits minutes for the build servers dotnet leaves running before it ends the job.
+      - name: Stop build servers
+        if: always()
+        run: dotnet build-server shutdown
