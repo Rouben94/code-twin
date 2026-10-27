@@ -4,8 +4,10 @@ using Microsoft.VisualStudio.Threading;
 
 namespace CodeTwin.Vsix;
 
-internal sealed class ChatServices(string mcpEndpoint, string mcpToken, ChatContextProvider context, JoinableTaskFactory joinableTaskFactory)
+internal sealed class ChatServices(string mcpEndpoint, string mcpToken, ChatContextProvider context, JoinableTaskFactory joinableTaskFactory, ChatOptionsPage options)
 {
+    public ChatOptionsPage Options => options;
+
     public string McpEndpoint => mcpEndpoint;
 
     public string McpToken => mcpToken;

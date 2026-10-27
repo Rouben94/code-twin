@@ -143,7 +143,8 @@ procedure RegisterCopilot;
 begin
   if not Copilot('--version') then
   begin
-    SuppressibleMsgBox('Copilot CLI was not found. The chat and the twincat plugin need it: install Copilot CLI, then run setup again.', mbInformation, MB_OK, IDOK);
+    SuppressibleMsgBox('Copilot CLI was not found. The twincat plugin and the chat on GitHub Copilot need it: install Copilot CLI, then run setup again. ' +
+      'To run the chat on Claude instead, install Claude Code and set Tools > Options > CodeTwin > Chat > AI provider to Claude.', mbInformation, MB_OK, IDOK);
     Exit;
   end;
   Copilot('plugin marketplace remove code-twin --force');

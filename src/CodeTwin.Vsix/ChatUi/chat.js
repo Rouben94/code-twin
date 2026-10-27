@@ -224,13 +224,16 @@ const showError = (text) => {
 
 let signInCard = null;
 
-// Sign-in runs in Copilot CLI's own window (`copilot login`); the chat only starts it.
+// The provider set in Tools > Options > CodeTwin > Chat; the sidecar names it in its ready message.
+let provider = "GitHub Copilot";
+
+// Sign-in runs in the provider's own window (`copilot login`, `claude auth login`); the chat only starts it.
 const showSignedOut = () => {
   setStatus("offline", "Not signed in");
   showTick("error", "not signed in");
   signInCard = append(element("div", "permission"));
-  signInCard.appendChild(element("div", "title", "Sign in to GitHub Copilot"));
-  signInCard.appendChild(element("div", "", "The chat uses your GitHub Copilot account. Sign-in opens in a Copilot window; CodeTwin never sees your credentials."));
+  signInCard.appendChild(element("div", "title", `Sign in to ${provider}`));
+  signInCard.appendChild(element("div", "", `The chat uses your ${provider} account. Sign-in opens in a ${provider} window; CodeTwin never sees your credentials.`));
   const actions = signInCard.appendChild(element("div", "actions"));
   const button = actions.appendChild(element("button", "button primary", "Sign in"));
   button.addEventListener("click", () => {
@@ -247,8 +250,10 @@ const handlers = {
     }
   },
   context: ({ solution, activeElement }) => showContext(solution, activeElement),
-  ready: () => {
+  ready: (message) => {
     ready = true;
+    provider = message.provider || provider;
+    document.getElementById("private-provider").textContent = provider;
     setStatus("online", "twincat agent");
     if (!busy) {
       showTick("run", "ready");
@@ -297,7 +302,7 @@ const handlers = {
   },
   error: ({ text }) => {
     if (!ready) {
-      setStatus("offline", "Copilot not connected");
+      setStatus("offline", "Chat not connected");
     }
     showTick("error", ready ? "request failed" : "not connected");
     showError(text);
@@ -387,6 +392,16 @@ const resetThread = () => {
   setBusy(false);
   showTick(ready ? "run" : "warn", ready ? "ready" : "connecting");
   document.dispatchEvent(new Event("chatreset"));
+};
+
+// The extension restarts the sidecar on the new provider; the old chat belongs to the old provider.
+handlers.providerChanged = () => {
+  ready = false;
+  signInCard?.remove();
+  signInCard = null;
+  resetThread();
+  setPrivate(false);
+  setStatus("connecting", "Switching provider...");
 };
 
 const startNewChat = (isPrivate) => {

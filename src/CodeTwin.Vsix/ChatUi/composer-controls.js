@@ -43,6 +43,7 @@
   let context = { current: 0, limit: 0 };
   let totals = { input: 0, output: 0, cacheRead: 0, calls: 0 };
   let quota = null;
+  let limits = null;
   let chatCredits = null;
   let openFor = null;
 
@@ -196,7 +197,7 @@
     menu.className = "menu";
     menu.appendChild(element("div", "menu-title", "Model"));
     if (!models.length) {
-      menu.appendChild(element("div", "menu-empty", "Models load once GitHub Copilot is connected."));
+      menu.appendChild(element("div", "menu-empty", "Models load once the chat is connected."));
     }
     for (const m of models) {
       menu.appendChild(menuItem(m.name, "", formatMultiplier(m.multiplier), m.id === model, () => {
@@ -207,8 +208,10 @@
     }
     const current = findModel(model);
     if (current?.efforts?.length) {
-      menu.appendChild(element("div", "menu-title", "Reasoning effort"));
-      const row = menu.appendChild(element("div", "segments"));
+      // Pinned below the scrolling model list, so the effort stays visible however long the list is.
+      const pinned = menu.appendChild(element("div", "menu-pinned"));
+      pinned.appendChild(element("div", "menu-title", "Reasoning effort"));
+      const row = pinned.appendChild(element("div", "segments"));
       for (const level of current.efforts) {
         const selected = level === (effort || current.defaultEffort);
         const button = row.appendChild(element("button", `segment${selected ? " selected" : ""}`, level));
@@ -271,6 +274,16 @@
         menu.appendChild(meter(Math.round(used)));
         menu.appendChild(usageRow(`${Math.round(quota.used)} of ${quota.entitlement} used`, quota.resetDate
           ? `resets ${new Date(quota.resetDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+          : ""));
+      }
+    }
+
+    if (limits?.length) {
+      menu.appendChild(element("div", "menu-title", "Plan usage"));
+      for (const limit of limits) {
+        menu.appendChild(meter(limit.percent));
+        menu.appendChild(usageRow(`${limit.label}: ${limit.percent}% used`, limit.resetsAt
+          ? `resets ${new Date(limit.resetsAt).toLocaleString(undefined, { weekday: "short", hour: "2-digit", minute: "2-digit" })}`
           : ""));
       }
     }
@@ -368,6 +381,13 @@
     }
   };
 
+  handlers.limits = ({ items }) => {
+    limits = items;
+    if (openFor === usageButton) {
+      renderUsagePanel();
+    }
+  };
+
   handlers.chatCredits = ({ credits }) => {
     chatCredits = credits;
     if (openFor === usageButton) {
@@ -376,6 +396,15 @@
   };
 
   handlers.plan = showPlan;
+
+  // Quota and models belong to the old provider's account; the new sidecar sends its own.
+  handlers.providerChanged = ((resetChat) => () => {
+    resetChat();
+    quota = null;
+    limits = null;
+    models = [];
+    showModel();
+  })(handlers.providerChanged);
 
   handlers.session = ((startSession) => (message) => {
     startSession(message);

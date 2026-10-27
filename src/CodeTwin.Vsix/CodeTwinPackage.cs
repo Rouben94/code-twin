@@ -17,6 +17,7 @@ namespace CodeTwin.Vsix;
 [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExistsAndFullyLoaded_string, PackageAutoLoadFlags.BackgroundLoad)]
 [ProvideToolWindow(typeof(ChatToolWindow), Style = VsDockStyle.Tabbed, Window = ToolWindowGuids.SolutionExplorer)]
 [ProvideMenuResource("Menus.ctmenu", 1)]
+[ProvideOptionPage(typeof(ChatOptionsPage), "CodeTwin", "Chat", 0, 0, true)]
 public sealed class CodeTwinPackage : AsyncPackage
 {
     public const string PackageGuidString = "4a8e2c71-9d3b-4f56-8e0a-1c7b5d9f2e63";
@@ -50,7 +51,8 @@ public sealed class CodeTwinPackage : AsyncPackage
         var reader = new PlcTreeReader(dte);
         mcpHost = CodeTwinMcpHost.Start(
             new UiThreadPlcAutomation(JoinableTaskFactory, reader, new ErrorListReader(JoinableTaskFactory, errorList)));
-        chatServices = new ChatServices(mcpHost.Endpoint, mcpHost.Token, new ChatContextProvider(dte, reader), JoinableTaskFactory);
+        chatServices = new ChatServices(
+            mcpHost.Endpoint, mcpHost.Token, new ChatContextProvider(dte, reader), JoinableTaskFactory, (ChatOptionsPage)GetDialogPage(typeof(ChatOptionsPage)));
 
         if (await GetServiceAsync(typeof(IMenuCommandService)) is OleMenuCommandService commands)
         {

@@ -655,6 +655,15 @@ footer { padding: 0 16px 10px; }
 
 .menu[hidden] { display: none; }
 
+.menu-pinned {
+  position: sticky;
+  bottom: -6px;
+  margin: 6px -6px -6px;
+  padding: 0 6px 6px;
+  border-top: 1px solid var(--hairline);
+  background: var(--input-background);
+}
+
 .menu-title {
   padding: 8px 8px 4px;
   color: var(--muted);

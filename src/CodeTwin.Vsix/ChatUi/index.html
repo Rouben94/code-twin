@@ -34,7 +34,7 @@
         <div id="tick-status" class="tick-status"><span class="led">&#9679;</span> <span id="tick-status-text">WARNING &middot; connecting</span></div>
         <h1>Hi, I'm Tick. What should we work on?</h1>
         <p id="welcome-context">The twincat agent reads, edits and builds the PLC project open in this shell.</p>
-        <p class="private-note">Private chat: it is not saved in the chat history and is deleted when you leave it. Prompts still go to GitHub Copilot.</p>
+        <p class="private-note">Private chat: it is not saved in the chat history and is deleted when you leave it. Prompts still go to <span id="private-provider">GitHub Copilot</span>.</p>
         <div id="recent-chats" class="recent-chats" hidden></div>
       </section>
       <div id="thread"></div>
@@ -46,7 +46,7 @@
       <textarea id="prompt" rows="1" placeholder="Ask the twincat agent..." aria-label="Message"></textarea>
       <div class="composer-bar">
         <div class="composer-tools">
-          <div id="status" class="status connecting"><span class="dot"></span><span id="status-text">Starting GitHub Copilot...</span></div>
+          <div id="status" class="status connecting"><span class="dot"></span><span id="status-text">Starting the chat...</span></div>
           <button id="mode" class="chip" type="button" title="Mode (Shift+Tab)" aria-haspopup="menu"><span id="mode-text">Agent</span><svg class="caret" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg></button>
           <button id="model" class="chip" type="button" title="Model" aria-haspopup="menu"><span id="model-text">Default model</span><svg class="caret" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6.5 8 10l3.5-3.5"/></svg></button>
         </div>

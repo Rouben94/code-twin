@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -10,7 +11,7 @@ using Microsoft.VisualStudio.Shell;
 namespace CodeTwin.Vsix;
 
 /// <summary>Runs the code-twin-chat sidecar and relays JSON lines to and from it.</summary>
-internal sealed class ChatSidecar(string executablePath, string mcpUrl, string mcpToken) : IDisposable
+internal sealed class ChatSidecar(string executablePath, string mcpUrl, string mcpToken, Func<IReadOnlyDictionary<string, string>> environment) : IDisposable
 {
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
     private readonly object gate = new();
@@ -50,6 +51,25 @@ internal sealed class ChatSidecar(string executablePath, string mcpUrl, string m
         }
     }
 
+    /// <summary>Stops the running sidecar and starts a new one, for example on another provider.</summary>
+    public void Restart()
+    {
+        System.Diagnostics.Process? running;
+        lock (gate)
+        {
+            if (disposed)
+            {
+                return;
+            }
+
+            running = process;
+            process = null;
+        }
+
+        Stop(running);
+        EnsureStarted();
+    }
+
     public void Dispose()
     {
         System.Diagnostics.Process? running;
@@ -60,6 +80,11 @@ internal sealed class ChatSidecar(string executablePath, string mcpUrl, string m
             process = null;
         }
 
+        Stop(running);
+    }
+
+    private void Stop(System.Diagnostics.Process? running)
+    {
         if (running is null)
         {
             return;
@@ -101,6 +126,10 @@ internal sealed class ChatSidecar(string executablePath, string mcpUrl, string m
         };
         startInfo.EnvironmentVariables["CODETWIN_MCP_URL"] = mcpUrl;
         startInfo.EnvironmentVariables["CODETWIN_MCP_TOKEN"] = mcpToken;
+        foreach (KeyValuePair<string, string> variable in environment())
+        {
+            startInfo.EnvironmentVariables[variable.Key] = variable.Value;
+        }
 
         var started = new System.Diagnostics.Process { StartInfo = startInfo };
         started.ErrorDataReceived += (_, e) =>
@@ -129,7 +158,9 @@ internal sealed class ChatSidecar(string executablePath, string mcpUrl, string m
             }
 
             source.WaitForExit();
-            if (!disposed)
+
+            // A sidecar stopped by Restart is replaced, not crashed.
+            if (!disposed && ReferenceEquals(source, process))
             {
                 string text = string.Format(CultureInfo.InvariantCulture, "The chat sidecar exited with code {0}. Your next message restarts it.", source.ExitCode);
                 MessageReceived?.Invoke(JsonSerializer.Serialize(new { type = "error", text }));

@@ -22,6 +22,8 @@ internal sealed class ChatControl : UserControl, IDisposable
     private readonly ChatContextProvider context;
     private readonly JoinableTaskFactory joinableTaskFactory;
     private readonly ChatSidecar sidecar;
+    private readonly ChatOptionsPage options;
+    private string? provider;
     private readonly WebView2 webView = new();
     private bool initialized;
 
@@ -29,8 +31,10 @@ internal sealed class ChatControl : UserControl, IDisposable
     {
         context = services.Context;
         joinableTaskFactory = services.JoinableTaskFactory;
-        sidecar = new ChatSidecar(Path.Combine(ExtensionDirectory, "chat", "code-twin-chat.exe"), services.McpEndpoint, services.McpToken);
+        options = services.Options;
+        sidecar = new ChatSidecar(Path.Combine(ExtensionDirectory, "chat", "code-twin-chat.exe"), services.McpEndpoint, services.McpToken, options.SidecarEnvironment);
         sidecar.MessageReceived += OnSidecarMessage;
+        ChatOptionsPage.Applied += OnOptionsApplied;
         VSColorTheme.ThemeChanged += OnThemeChanged;
 
         Content = webView;
@@ -47,6 +51,7 @@ internal sealed class ChatControl : UserControl, IDisposable
     public void Dispose()
     {
         VSColorTheme.ThemeChanged -= OnThemeChanged;
+        ChatOptionsPage.Applied -= OnOptionsApplied;
         sidecar.MessageReceived -= OnSidecarMessage;
         sidecar.Dispose();
         webView.Dispose();
@@ -99,6 +104,7 @@ internal sealed class ChatControl : UserControl, IDisposable
             case "ready":
                 PostTheme();
                 PostContext();
+                provider ??= string.Join(";", options.SidecarEnvironment().Values);
                 sidecar.EnsureStarted();
                 break;
             case "getContext":
@@ -130,6 +136,20 @@ internal sealed class ChatControl : UserControl, IDisposable
                 sidecar.Send(message);
                 break;
         }
+    }
+
+    // Only a provider change restarts the chat; saving the options unchanged keeps the running conversation.
+    private void OnOptionsApplied(object sender, EventArgs e)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        string current = string.Join(";", options.SidecarEnvironment().Values);
+        if (provider is not null && provider != current)
+        {
+            Post(new { type = "providerChanged" });
+            sidecar.Restart();
+        }
+
+        provider = current;
     }
 
     private void OnSidecarMessage(string line) =>
