@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
-using System.Linq;
 using CodeTwin.Core;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
@@ -59,7 +58,8 @@ internal sealed class PlcTreeReader(DTE dte)
     public PlcElement? ReadElement(string path)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        return ListElementsCore().FirstOrDefault(element => string.Equals(element.Path, path, StringComparison.OrdinalIgnoreCase));
+        ITcSmTreeItem? item = FindItem(path);
+        return item is null ? null : ToPlcElement(path.Substring(0, path.IndexOf('/')), item, path);
     }
 
     public IReadOnlyList<PlcElement> SearchElements(string query)
@@ -225,15 +225,34 @@ internal sealed class PlcTreeReader(DTE dte)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
-        string? declaration = (item as ITcPlcDeclaration)?.DeclarationText;
-        string? implementation = (item as ITcPlcImplementation)?.ImplementationText;
-        elements.Add(new PlcElement(projectName, item.Name, path, DescribeItemType(item), declaration, implementation));
+        elements.Add(ToPlcElement(projectName, item, path));
 
         foreach (ITcSmTreeItem child in item)
         {
             ReadElements(projectName, child, path + "/" + child.Name, elements);
         }
     }
+
+    // TwinCAT throws native exceptions (SEHException) for some items; one such item must not hide the rest of the project.
+    private static PlcElement ToPlcElement(string projectName, ITcSmTreeItem item, string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        string? declaration = null;
+        string? implementation = null;
+        try
+        {
+            declaration = (item as ITcPlcDeclaration)?.DeclarationText;
+            implementation = (item as ITcPlcImplementation)?.ImplementationText;
+        }
+        catch (ExternalException exception)
+        {
+            ActivityLog.LogWarning(nameof(PlcTreeReader), $"Reading the source of PLC element '{path}' failed: {exception.GetType().Name}: {exception.Message}");
+        }
+
+        return new PlcElement(projectName, item.Name, path, DescribeItemType(item), declaration, implementation);
+    }
+
     private static void FindElementPaths(ITcSmTreeItem item, string path, string name, ICollection<string> paths)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
