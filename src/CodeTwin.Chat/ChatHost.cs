@@ -8,7 +8,7 @@ namespace CodeTwin.Chat;
 
 internal sealed record ChatOptions(string CliPath, string McpUrl, string McpToken, string AgentsDirectory, string SkillsDirectory);
 
-internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IAsyncDisposable
+internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChatHost
 {
     public const string McpServerName = "codetwin";
     private const string AgentName = "twincat";

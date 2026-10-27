@@ -1,0 +1,4 @@
+{
+  "name": "codetwin",
+  "description": "The twincat agent and skills of CodeTwin Chat, loaded by Claude Code with --plugin-dir."
+}

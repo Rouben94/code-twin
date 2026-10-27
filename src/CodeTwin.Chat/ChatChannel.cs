@@ -20,7 +20,7 @@ internal sealed class ChatChannel(TextWriter output)
         }
     }
 
-    public void Ready() => Send(new { type = "ready" });
+    public void Ready(string provider) => Send(new { type = "ready", provider });
 
     public void Error(string text) => Send(new { type = "error", text });
 }

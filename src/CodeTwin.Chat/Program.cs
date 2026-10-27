@@ -12,10 +12,14 @@ if (string.IsNullOrEmpty(mcpUrl) || string.IsNullOrEmpty(mcpToken))
     return 1;
 }
 
-string? cliPath = CopilotCliLocator.Locate();
+bool useClaude = string.Equals(Environment.GetEnvironmentVariable("CODETWIN_CHAT_PROVIDER"), "claude", StringComparison.OrdinalIgnoreCase);
+string provider = useClaude ? "Claude Code" : "GitHub Copilot CLI";
+string? cliPath = useClaude ? ClaudeCliLocator.Locate() : CopilotCliLocator.Locate();
 if (cliPath is null)
 {
-    channel.Error($"GitHub Copilot CLI (copilot.exe) was not found on PATH. Install it (winget install GitHub.Copilot), run `copilot login`, then reopen this window. You can also point {CopilotCliLocator.PathVariable} at copilot.exe.");
+    channel.Error(useClaude
+        ? $"Claude Code (claude.exe) was not found on PATH or in %USERPROFILE%\\.local\\bin. Install it (https://code.claude.com/docs/en/setup), run `claude auth login`, then reopen this window. You can also point {ClaudeCliLocator.PathVariable} at claude.exe."
+        : $"GitHub Copilot CLI (copilot.exe) was not found on PATH. Install it (winget install GitHub.Copilot), run `copilot login`, then reopen this window. You can also point {CopilotCliLocator.PathVariable} at copilot.exe.");
     return 1;
 }
 
@@ -26,18 +30,18 @@ ChatOptions options = new(
     Path.Combine(AppContext.BaseDirectory, "agents"),
     Path.Combine(AppContext.BaseDirectory, "skills"));
 
-await using ChatHost host = new(options, channel);
+await using IChatHost host = useClaude ? new ClaudeChatHost(options, channel) : new ChatHost(options, channel);
 try
 {
     await host.StartAsync(CancellationToken.None);
 }
 catch (Exception exception)
 {
-    channel.Error($"GitHub Copilot CLI could not be started: {exception.Message}");
+    channel.Error($"{provider} could not be started: {exception.Message}");
     return 1;
 }
 
-channel.Ready();
+channel.Ready(useClaude ? "Claude" : "GitHub Copilot");
 
 try
 {
@@ -48,7 +52,7 @@ try
 }
 catch (Exception exception)
 {
-    await Console.Error.WriteLineAsync($"Reading the Copilot sign-in status failed: {exception.Message}");
+    await Console.Error.WriteLineAsync($"Reading the {provider} sign-in status failed: {exception.Message}");
 }
 
 using StreamReader input = new(Console.OpenStandardInput(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
@@ -137,7 +141,7 @@ async Task PublishAccountDataAsync()
     }
     catch (Exception exception)
     {
-        await Console.Error.WriteLineAsync($"Reading the Copilot models or usage failed: {exception.Message}");
+        await Console.Error.WriteLineAsync($"Reading the {provider} models or usage failed: {exception.Message}");
     }
 }
 
