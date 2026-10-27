@@ -127,6 +127,25 @@ public sealed class ClaudeTranscriptsTests : IDisposable
         Assert.Empty(ClaudeChatHost.PlanLimits(JsonNode.Parse("""{"type":"rate_limit_event","rate_limit_info":{}}""")!));
     }
 
+    [Fact]
+    public void ReadsTheLimitsFromTheUsageReport()
+    {
+        JsonNode report = JsonNode.Parse("""
+            {"rate_limits":{"limits":[
+              {"kind":"session","group":"session","percent":40,"resets_at":"2026-10-27T17:49:59.5+01:00"},
+              {"kind":"weekly_all","group":"weekly","percent":7,"resets_at":null},
+              {"kind":"weekly_model","group":"weekly","percent":3,"resets_at":null}]}}
+            """)!;
+
+        Assert.Equal(
+            [
+                new PlanLimit("5-hour limit", 40, new DateTimeOffset(2026, 10, 27, 16, 49, 59, 500, TimeSpan.Zero)),
+                new PlanLimit("Weekly limit", 7, null),
+            ],
+            ClaudeChatHost.UsageLimits(report));
+        Assert.Empty(ClaudeChatHost.UsageLimits(null));
+    }
+
     private static string AgentSetting(string agent) => $$"""{"type":"agent-setting","agentSetting":"{{agent}}"}""";
 
     private static string User(string text) =>

@@ -72,8 +72,36 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
         });
     }
 
-    // Claude subscriptions expose no quota to Claude Code's clients; the usage panel shows the context window only.
-    public Task PublishQuotaAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    // Claude Code answers /usage itself, without a model call; later model calls update the limits through rate_limit_event.
+    public async Task PublishQuotaAsync(CancellationToken cancellationToken)
+    {
+        TaskCompletionSource<JsonNode?> report = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using ClaudeCli probe = ClaudeCli.Start(
+            options.CliPath,
+            NeutralDirectory(),
+            [.. ClaudeCli.StreamArguments, "--strict-mcp-config", "--no-session-persistence"],
+            message =>
+            {
+                if (message["usage_report"] is JsonNode usage)
+                {
+                    report.TrySetResult(usage);
+                }
+                else if (message["type"]?.GetValue<string>() == "result")
+                {
+                    report.TrySetResult(null);
+                }
+
+                return Task.CompletedTask;
+            });
+        probe.SendUserMessage("/usage");
+
+        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        if (UsageLimits(await report.Task.WaitAsync(timeout.Token).ConfigureAwait(false)) is { Count: > 0 } items)
+        {
+            channel.Send(new { type = "limits", items });
+        }
+    }
 
     public async Task<bool> PublishAuthStatusAsync(CancellationToken cancellationToken)
     {
@@ -557,6 +585,33 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
             double utilization = window["utilization"] is JsonValue value && value.TryGetValue(out double reported) ? reported : 0;
             long resetsAt = Number(window["resetsAt"]);
             limits.Add(new PlanLimit(label, Math.Round(utilization * 100), resetsAt > 0 ? DateTimeOffset.FromUnixTimeSeconds(resetsAt) : null));
+        }
+
+        return limits;
+    }
+
+    /// <summary>The same limits from the usage report of /usage, which names them by kind.</summary>
+    internal static IReadOnlyList<PlanLimit> UsageLimits(JsonNode? report)
+    {
+        List<PlanLimit> limits = [];
+        foreach (JsonNode limit in (report?["rate_limits"]?["limits"] as JsonArray ?? []).OfType<JsonNode>())
+        {
+            string? label = limit["kind"]?.GetValue<string>() switch
+            {
+                "session" => "5-hour limit",
+                "weekly_all" => "Weekly limit",
+                _ => null,
+            };
+            if (label is null)
+            {
+                continue;
+            }
+
+            double percent = limit["percent"] is JsonValue value && value.TryGetValue(out double reported) ? reported : 0;
+            DateTimeOffset? resetsAt = DateTimeOffset.TryParse(limit["resets_at"]?.GetValue<string>(), CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTimeOffset parsed)
+                ? parsed.ToUniversalTime()
+                : null;
+            limits.Add(new PlanLimit(label, Math.Round(percent), resetsAt));
         }
 
         return limits;
