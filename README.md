@@ -19,13 +19,13 @@ flowchart LR
 ```
 
 - The **CodeTwin extension** runs inside TwinCAT XAE Shell and gives AI agents tools to list, read, write, create and build PLC elements.
-- The **chat** inside the shell talks to it directly.
+- The **chat** inside the shell talks to it directly. It runs on Copilot CLI or on Claude Code.
 - **Copilot CLI** and the **Copilot app** reach it through the `twincat` plugin. The plugin finds the shell that has your project open, or starts one.
-- The AI runs on your own GitHub Copilot subscription. CodeTwin never touches your credentials.
+- The AI runs on your own GitHub Copilot or Claude subscription. CodeTwin never touches your credentials.
 
 ## Install
 
-You need Windows x64, TwinCAT XAE Shell (TwinCAT 3.1.4026), the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) and [Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli).
+You need Windows x64, TwinCAT XAE Shell (TwinCAT 3.1.4026), the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) and [Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli) or [Claude Code](https://code.claude.com/docs/en/setup).
 
 1. Close TwinCAT XAE Shell.
 2. Run `CodeTwin-Setup-<version>.exe` from the [releases](https://github.com/Rouben94/code-twin/releases). No admin rights needed.
@@ -41,7 +41,7 @@ To update, run a newer setup. To uninstall, use **Settings > Apps**.
   </picture>
 </p>
 
-- **In the shell:** open your solution, then **Tools > CodeTwin > Chat**.
+- **In the shell:** open your solution, then **Tools > CodeTwin > Chat**. The chat uses GitHub Copilot; to use your Claude subscription instead, set **AI provider** to Claude in **Tools > Options > CodeTwin > Chat**.
 - **In Copilot CLI:** run `copilot --agent twincat:twincat` in your project folder.
 - **In the Copilot app:** open your project folder and ask it to follow the `twincat` agent.
 
@@ -63,7 +63,7 @@ Supported today:
 - Building the solution and fixing compiler errors and warnings
 - Writing TcUnit tests (running them is up to you)
 - Several solutions or repositories open at the same time, each in its own shell
-- Clients: CodeTwin Chat, Copilot CLI and the Copilot app
+- Clients: CodeTwin Chat (on GitHub Copilot or Claude), Copilot CLI and the Copilot app
 - TwinCAT 3.1.4026
 
 Not supported yet:
@@ -77,7 +77,7 @@ Not supported yet:
 - Adding or changing library references
 - Activating the configuration, logging in, downloading and online changes
 - Running TcUnit tests
-- Clients: Claude Code, VS Code, Cursor, Codex CLI and Claude Desktop
+- Clients: Claude Code in the terminal, VS Code, Cursor, Codex CLI and Claude Desktop
 - TwinCAT 3.1.4024
 
 More is coming, and this list is updated as features are added.

@@ -53,16 +53,19 @@ Beckhoff's TwinCAT Chat (2023) connects to OpenAI / Azure with API keys and has 
    - models: Claude Code has no model list call, so the picker offers the aliases (Opus, Sonnet, Haiku, Fable)
      with their efforts
    - quota and AI credits: no source for subscriptions, so the usage menu shows only the context window
-3. **Provider switch**:
-   - stored per user (VSIX settings store), sent to the sidecar at start; changing it restarts the sidecar
-     and starts a new chat (chats don't move between providers)
-   - set in the composer (a "Copilot / Claude" choice next to the model picker) and later in
-     Tools > Options > CodeTwin
-   - only installed CLIs are offered; with only one installed it is chosen; with both, the user's choice,
-     default Copilot (as today)
-   - the status line, sign-in card and private-chat note name the active provider instead of "GitHub Copilot"
-   - the chat history shows only the active provider's chats
-4. **Chat UI**: provider choice, provider name in texts, hide the quota rows when there is no quota.
+3. **Provider option**, done: Tools > Options > CodeTwin > Chat, stored per user, default GitHub Copilot.
+   - **AI provider** (GitHub Copilot / Claude) and an optional **Claude Code path**; the extension passes them
+     to the sidecar as `CODETWIN_CHAT_PROVIDER` and `CLAUDE_CLI_PATH`
+   - changing the provider restarts the sidecar and clears the chat (chats don't move between providers);
+     the chat history shows only the active provider's chats
+   - the status line, sign-in card and private-chat note name the active provider
+4. **Chat UI**, done: provider name in the texts; the effort row is pinned in the model menu; on Claude the
+   usage panel shows the 5-hour and weekly limits from Claude Code's `rate_limit_event` instead of the
+   Copilot quota.
+
+Found while testing in the shell: Claude Code validates MCP results, and `structuredContent` must be an
+object. List results (`plc_list_elements`, `plc_search_elements`, `plc_get_errors`) are now sent as
+`{"items": [...]}`; the text content is unchanged.
 
 ## Spike results (2026-10-27, Claude Code 2.1.308, Pro subscription)
 
@@ -100,16 +103,15 @@ Findings for the implementation:
   `assistant` text entries (title = first prompt) and tolerate anything else.
 - `ExitPlanMode` has no action list like Copilot's; the plan card shows approve / reject with feedback.
 
-Still open: the HTTP MCP endpoint against a running TcXaeShell (first test of the implementation).
+The HTTP MCP endpoint against a running TcXaeShell was confirmed in the first test of the implementation.
 
 ## Order
 
-1. Spike (1-2 days): `claude -p` stream-json with `--plugin-dir` + `--agent twincat` + HTTP MCP config
-   from the sidecar; check that the agent, skills and `codetwin` tools load, that permission and plan
-   requests reach the host, `--resume`, and `claude auth status`.
-2. `IChatHost` and `ClaudeChatHost`, with tests like `ChatHost`'s.
-3. Provider switch and the UI texts.
-4. Manual test with a Claude subscription and a Copilot subscription on the same machine, switching both ways.
+1. Spike, done.
+2. `IChatHost` and `ClaudeChatHost`, with tests like `ChatHost`'s, done.
+3. Provider option and the UI texts, done.
+4. Manual test with a Claude subscription and a Copilot subscription on the same machine, switching both ways:
+   chat on Claude tested in the shell; switching both ways still to test.
 
 Later, each small: the Claude Code plugin for the terminal (`.claude-plugin/plugin.json` next to Copilot's,
 registered by setup), and Claude Desktop (`.mcpb` bundle). Then the new PLC tools on the Automation Interface.
