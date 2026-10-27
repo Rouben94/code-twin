@@ -38,8 +38,8 @@ jobs:
           $base = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
           $majorMinor = ($base -split '\.')[0..1] -join '.'
           $pattern = '^v' + [regex]::Escape($majorMinor) + '\.(\d+)$'
-          $patches = git tag --list "v$majorMinor.*" | Where-Object { $_ -match $pattern } | ForEach-Object { [int]$Matches[1] }
-          $patch = if ($patches) { ($patches | Measure-Object -Maximum).Maximum + 1 } else { 0 }
+          $patches = @(git tag --list "v$majorMinor.*" | Where-Object { $_ -match $pattern } | ForEach-Object { [int]$Matches[1] })
+          $patch = if ($patches.Count) { ($patches | Measure-Object -Maximum).Maximum + 1 } else { 0 }
           $version = "$majorMinor.$patch"
           "value=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Version $version"
