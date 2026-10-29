@@ -53,6 +53,8 @@ CodeTwin tool calls and reads inside the solution folder or the shipped agent an
 
 Chats are saved by the Copilot CLI in its own session store (`%USERPROFILE%\.copilot\session-state`). The **history** button lists the CodeTwin chats of the open solution; pick one to reload it and continue, or delete it. A new chat shows the five most recent ones on its start page. The **lock** button starts a private chat; click it again to leave it and start a saved chat. A private chat is not listed and is deleted when you leave it, start another chat, switch chats or close the shell. Prompts of a private chat still go to GitHub Copilot.
 
+The **paperclip** button attaches files to the next message; you can also drop files on the chat or paste them (pasted screenshots are saved under `%TEMP%\CodeTwin\Attachments`). The agent gets each file's path and may read it without asking. Copilot sends images and documents natively. Claude gets images (up to 3.75 MB) and PDFs (up to 20 MB) in the message and opens any other file with its Read tool.
+
 The bar under the message box picks the mode and the model, and shows usage:
 
 - **Mode**: Agent (default), Plan (the agent proposes a plan and waits for your approval before it edits) or Autopilot. Shift+Tab cycles the modes.

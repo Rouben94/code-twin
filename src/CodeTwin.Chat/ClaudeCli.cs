@@ -66,8 +66,9 @@ internal sealed class ClaudeCli : IAsyncDisposable
         return new ClaudeCli(process, onMessage);
     }
 
-    public void SendUserMessage(string text) =>
-        Write(new { type = "user", message = new { role = "user", content = text }, parent_tool_use_id = (string?)null, session_id = string.Empty });
+    /// <summary>Sends a user message whose content is plain text or a list of content blocks.</summary>
+    public void SendUserMessage(object content) =>
+        Write(new { type = "user", message = new { role = "user", content }, parent_tool_use_id = (string?)null, session_id = string.Empty });
 
     /// <summary>Sends a control request (initialize, interrupt, set_model, ...) and returns its response.</summary>
     public async Task<JsonNode?> RequestAsync(object request, CancellationToken cancellationToken)

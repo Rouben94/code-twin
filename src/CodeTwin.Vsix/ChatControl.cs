@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows.Controls;
 using Microsoft.VisualStudio.PlatformUI;
@@ -118,9 +119,19 @@ internal sealed class ChatControl : UserControl, IDisposable
                 {
                     type = "send",
                     prompt = root.GetProperty("prompt").GetString(),
+                    attachments = root.GetProperty("attachments"),
                     solution,
                     activeElement,
                 }));
+                break;
+            case "attachFiles":
+                // Files picked or dropped in the page arrive as CoreWebView2File objects that carry their path on disk.
+                Post(new { type = "attached", files = e.AdditionalObjects.OfType<CoreWebView2File>().Select(file => file.Path).Where(path => !string.IsNullOrEmpty(path)) });
+                break;
+            case "attachData":
+                string name = root.GetProperty("name").GetString() ?? string.Empty;
+                byte[] data = Convert.FromBase64String(root.GetProperty("data").GetString() ?? string.Empty);
+                joinableTaskFactory.RunAsync(() => SavePastedFileAsync(name, data)).FileAndForget("CodeTwin/AttachPastedFile");
                 break;
             case "listSessions":
             case "resumeSession":
@@ -136,6 +147,22 @@ internal sealed class ChatControl : UserControl, IDisposable
                 sidecar.Send(message);
                 break;
         }
+    }
+
+    // A pasted screenshot has no file on disk, so it is saved to the temp folder and attached by that path.
+    private async Task SavePastedFileAsync(string name, byte[] data)
+    {
+        string fileName = string.Concat(name.Select(c => Array.IndexOf(Path.GetInvalidFileNameChars(), c) < 0 ? c : '_'));
+        string folder = Path.Combine(Path.GetTempPath(), "CodeTwin", "Attachments", Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(folder, string.IsNullOrWhiteSpace(fileName) ? "pasted.png" : fileName);
+        Directory.CreateDirectory(folder);
+        using (FileStream stream = new(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+        {
+            await stream.WriteAsync(data, 0, data.Length);
+        }
+
+        await joinableTaskFactory.SwitchToMainThreadAsync();
+        Post(new { type = "attached", files = new[] { path } });
     }
 
     // Only a provider change restarts the chat; saving the options unchanged keeps the running conversation.

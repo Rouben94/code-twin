@@ -73,9 +73,12 @@ internal static partial class ClaudeTranscripts
             switch (entry["type"]?.GetValue<string>())
             {
                 case "user":
-                    if (UserText(entry) is { Length: > 0 } text)
+                    string raw = RawUserText(entry) ?? string.Empty;
+                    string text = StripContext(raw).Trim();
+                    IReadOnlyList<string> attachments = AttachedFiles(raw);
+                    if (text.Length > 0 || attachments.Count > 0)
                     {
-                        items.Add(new { kind = "user", text });
+                        items.Add(new { kind = "user", text, attachments });
                     }
 
                     foreach (JsonNode result in Blocks(entry, "tool_result"))
@@ -172,13 +175,26 @@ internal static partial class ClaudeTranscripts
     private static bool IsMainThread(JsonNode entry) =>
         entry["isSidechain"]?.GetValue<bool>() != true && entry["isMeta"]?.GetValue<bool>() != true;
 
-    private static string? UserText(JsonNode entry)
+    /// <summary>The files listed in the &lt;context&gt; block that <see cref="ChatContext.CreatePrompt"/> puts in front.</summary>
+    public static IReadOnlyList<string> AttachedFiles(string text)
+    {
+        int end = text.StartsWith("<context>", StringComparison.Ordinal) ? text.IndexOf("</context>", StringComparison.Ordinal) : -1;
+        return end < 0
+            ? []
+            : [.. text[..end].ReplaceLineEndings("\n").Split('\n')
+                .Where(line => line.StartsWith(ChatContext.AttachedFilePrefix, StringComparison.Ordinal))
+                .Select(line => line[ChatContext.AttachedFilePrefix.Length..])];
+    }
+
+    private static string? UserText(JsonNode entry) =>
+        RawUserText(entry) is { Length: > 0 } text ? StripContext(text).Trim() : null;
+
+    private static string? RawUserText(JsonNode entry)
     {
         JsonNode? content = entry["message"]?["content"];
-        string? text = content is JsonValue value && value.TryGetValue(out string? plain)
+        return content is JsonValue value && value.TryGetValue(out string? plain)
             ? plain
             : content is JsonArray ? string.Concat(Blocks(entry, "text").Select(block => block["text"]?.GetValue<string>())) : null;
-        return string.IsNullOrEmpty(text) ? null : StripContext(text).Trim();
     }
 
     private static IEnumerable<JsonNode> Blocks(JsonNode entry, string type) =>

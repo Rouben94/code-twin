@@ -32,6 +32,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
     private volatile bool approveAll;
     private bool privateChat;
     private int permissionCounter;
+    private string[] attachedFiles = [];
 
     public Task StartAsync(CancellationToken cancellationToken) => client.StartAsync(cancellationToken);
 
@@ -125,18 +126,20 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
     public void SetToolPermissions(string? name) =>
         approveAll = string.Equals(name, "approveAll", StringComparison.Ordinal);
 
-    public async Task SendAsync(string prompt, string? solution, string? activeElement, CancellationToken cancellationToken)
+    public async Task SendAsync(string prompt, IReadOnlyList<string> attachments, string? solution, string? activeElement, CancellationToken cancellationToken)
     {
         if (session is null || !string.Equals(sessionSolution, solution, StringComparison.OrdinalIgnoreCase))
         {
             await StartSessionAsync(solution, cancellationToken).ConfigureAwait(false);
         }
 
+        attachedFiles = [.. attachedFiles, .. attachments];
         await session!.SendAsync(
             new MessageOptions
             {
-                Prompt = ChatContext.CreatePrompt(prompt, solution, activeElement),
+                Prompt = ChatContext.CreatePrompt(prompt, attachments, solution, activeElement),
                 DisplayPrompt = prompt,
+                Attachments = [.. attachments.Select(path => new AttachmentFile { Path = path, DisplayName = Path.GetFileName(path) })],
             },
             cancellationToken).ConfigureAwait(false);
     }
@@ -316,7 +319,12 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
             switch (sessionEvent)
             {
                 case UserMessageEvent user:
-                    items.Add(new { kind = "user", text = user.Data.Content });
+                    items.Add(new
+                    {
+                        kind = "user",
+                        text = user.Data.Content,
+                        attachments = user.Data.Attachments?.OfType<AttachmentFile>().Select(file => file.Path),
+                    });
                     break;
                 case AssistantMessageEvent message when !string.IsNullOrEmpty(message.Data.Content):
                     items.Add(new { kind = "assistant", text = message.Data.Content });
@@ -347,6 +355,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
 
     private async Task CloseSessionAsync()
     {
+        attachedFiles = [];
         subscription?.Dispose();
         subscription = null;
         if (session is not null)
@@ -478,11 +487,11 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
     private bool IsTrusted(PermissionRequest request) => request switch
     {
         PermissionRequestMcp mcp => string.Equals(mcp.ServerName, McpServerName, StringComparison.Ordinal),
-        PermissionRequestRead read => IsTrustedRead(read.Path, [SolutionFolder(sessionSolution), options.AgentsDirectory, options.SkillsDirectory]),
+        PermissionRequestRead read => IsTrustedRead(read.Path, [SolutionFolder(sessionSolution), options.AgentsDirectory, options.SkillsDirectory, .. attachedFiles]),
         _ => false,
     };
 
-    // Reads run without asking only inside the solution folder and the shipped agent and skills.
+    // Reads run without asking only inside the solution folder, the shipped agent and skills, and the files the user attached.
     // Anything else, and every network path (opening one sends the Windows credentials), goes to the user.
     internal static bool IsTrustedRead(string? path, IEnumerable<string?> trustedFolders)
     {

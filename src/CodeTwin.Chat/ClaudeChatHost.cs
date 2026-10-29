@@ -35,6 +35,7 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
     private volatile bool busy;
     private bool privateChat;
     private int permissionCounter;
+    private string[] attachedFiles = [];
     private string? lastMessageId;
     private long contextTokens;
     private IReadOnlyList<(string Id, string? Resolved)> models = [];
@@ -155,7 +156,7 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
     public void SetToolPermissions(string? name) =>
         approveAll = string.Equals(name, "approveAll", StringComparison.Ordinal);
 
-    public async Task SendAsync(string prompt, string? solution, string? activeElement, CancellationToken cancellationToken)
+    public async Task SendAsync(string prompt, IReadOnlyList<string> attachments, string? solution, string? activeElement, CancellationToken cancellationToken)
     {
         if (sessionId is null || !string.Equals(sessionSolution, solution, StringComparison.OrdinalIgnoreCase))
         {
@@ -168,8 +169,11 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
             StartProcess(resume: sessionStored);
         }
 
+        object content = await ClaudeMessageContent.CreateAsync(
+            ChatContext.CreatePrompt(prompt, attachments, solution, activeElement), attachments, cancellationToken).ConfigureAwait(false);
+        attachedFiles = [.. attachedFiles, .. attachments];
         busy = true;
-        cli!.SendUserMessage(ChatContext.CreatePrompt(prompt, solution, activeElement));
+        cli!.SendUserMessage(content);
     }
 
     public async Task AbortAsync(CancellationToken cancellationToken)
@@ -340,6 +344,7 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
     private async Task CloseSessionAsync()
     {
         await CloseProcessAsync().ConfigureAwait(false);
+        attachedFiles = [];
         sessionId = null;
         sessionSolution = null;
         sessionStored = false;
@@ -547,7 +552,7 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
         _ when tool.StartsWith($"mcp__{ChatHost.McpServerName}__", StringComparison.Ordinal) => true,
         "Read" or "Glob" or "Grep" => ChatHost.IsTrustedRead(
             Text(input, "file_path") ?? Text(input, "path"),
-            [SolutionFolder(sessionSolution), options.AgentsDirectory, options.SkillsDirectory]),
+            [SolutionFolder(sessionSolution), options.AgentsDirectory, options.SkillsDirectory, .. attachedFiles]),
         _ => false,
     };
 

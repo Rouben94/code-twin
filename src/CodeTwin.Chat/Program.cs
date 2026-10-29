@@ -84,6 +84,7 @@ async Task HandleAsync(string line)
         case "send":
             await host.SendAsync(
                 command.GetProperty("prompt").GetString() ?? string.Empty,
+                GetStrings(command, "attachments"),
                 GetOptionalString(command, "solution"),
                 GetOptionalString(command, "activeElement"),
                 CancellationToken.None);
@@ -147,3 +148,8 @@ async Task PublishAccountDataAsync()
 
 static string? GetOptionalString(JsonElement element, string name) =>
     element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+static IReadOnlyList<string> GetStrings(JsonElement element, string name) =>
+    element.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.Array
+        ? [.. value.EnumerateArray().Select(item => item.GetString()).OfType<string>()]
+        : [];

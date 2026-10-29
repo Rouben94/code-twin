@@ -15,6 +15,8 @@ const prompt = document.getElementById("prompt");
 const sendButton = document.getElementById("send");
 const tickStatus = document.getElementById("tick-status");
 const tickStatusText = document.getElementById("tick-status-text");
+const attachmentList = document.getElementById("attachments");
+const fileInput = document.getElementById("file-input");
 const tools = new Map();
 
 document.getElementById("tick-large").appendChild(TickSprite.create(7));
@@ -45,6 +47,7 @@ let reply = null;
 let replyText = "";
 let activity = null;
 let turnHeadShown = false;
+let attachments = [];
 
 const post = (message) => host.postMessage(JSON.stringify(message));
 
@@ -92,7 +95,7 @@ const updateSendButton = () => {
   sendButton.classList.toggle("busy", busy);
   sendButton.title = busy ? "Stop" : "Send";
   sendButton.setAttribute("aria-label", sendButton.title);
-  sendButton.disabled = !busy && prompt.value.trim() === "";
+  sendButton.disabled = !busy && prompt.value.trim() === "" && attachments.length === 0;
 };
 
 const setBusy = (value) => {
@@ -130,6 +133,53 @@ const renderReply = (text) => {
 };
 
 const lastSegment = (path) => path.split(/[\\/]/).filter(Boolean).pop() || path;
+
+const attachmentChip = (path) => {
+  const chip = element("span", "attachment");
+  chip.title = path;
+  chip.appendChild(element("span", "attachment-name", lastSegment(path)));
+  return chip;
+};
+
+const appendUserMessage = (text, files) => {
+  const bubble = element("div", "message user", text);
+  if (files?.length) {
+    bubble.appendChild(element("div", "attachments")).append(...files.map(attachmentChip));
+  }
+  append(bubble);
+};
+
+const renderAttachments = () => {
+  attachmentList.replaceChildren(...attachments.map((path) => {
+    const chip = attachmentChip(path);
+    const remove = chip.appendChild(element("button", "attachment-remove", "×"));
+    remove.type = "button";
+    remove.title = `Remove ${lastSegment(path)}`;
+    remove.setAttribute("aria-label", remove.title);
+    remove.addEventListener("click", () => {
+      attachments = attachments.filter((other) => other !== path);
+      renderAttachments();
+      prompt.focus();
+    });
+    return chip;
+  }));
+  attachmentList.hidden = attachments.length === 0;
+  updateSendButton();
+};
+
+// The extension resolves picked and dropped files to their paths on disk and answers with an "attached" message.
+const attachFiles = (files) => {
+  if (files.length) {
+    host.postMessageWithAdditionalObjects(JSON.stringify({ type: "attachFiles" }), files);
+  }
+};
+
+// Pasted files, such as screenshots, have no path, so their content goes to the extension, which saves them.
+const attachPastedFile = (file) => {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => post({ type: "attachData", name: file.name, data: reader.result.slice(reader.result.indexOf(",") + 1) }));
+  reader.readAsDataURL(file);
+};
 
 const showContext = (solution, activeElement) => {
   contextText.replaceChildren();
@@ -290,6 +340,11 @@ const handlers = {
     }
     endReply();
   },
+  attached: ({ files }) => {
+    attachments = [...new Set([...attachments, ...files])];
+    renderAttachments();
+    prompt.focus();
+  },
   tool: showTool,
   permission: showPermission,
   idle: () => {
@@ -333,23 +388,65 @@ composer.addEventListener("submit", (event) => {
   }
 
   const text = prompt.value.trim();
-  if (!text) {
+  if (!text && attachments.length === 0) {
     return;
   }
 
+  const files = attachments;
   endReply();
   activity = null;
   turnHeadShown = false;
-  append(element("div", "message user", text));
+  appendUserMessage(text, files);
   messages.scrollTop = messages.scrollHeight;
   prompt.value = "";
+  attachments = [];
+  renderAttachments();
   autosize();
   setBusy(true);
   showTick("warn", "thinking");
-  post({ type: "send", prompt: text });
+  post({ type: "send", prompt: text, attachments: files });
 });
 
 prompt.addEventListener("input", autosize);
+
+prompt.addEventListener("paste", (event) => {
+  const files = [...event.clipboardData.files];
+  if (files.length) {
+    event.preventDefault();
+    files.forEach(attachPastedFile);
+  }
+});
+
+document.getElementById("attach").addEventListener("click", () => fileInput.click());
+
+fileInput.addEventListener("change", () => {
+  attachFiles(fileInput.files);
+  fileInput.value = "";
+});
+
+const isFileDrag = (event) => event.dataTransfer?.types.includes("Files");
+
+document.addEventListener("dragover", (event) => {
+  if (isFileDrag(event)) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    composer.classList.add("dropping");
+  }
+});
+
+document.addEventListener("dragleave", (event) => {
+  if (!event.relatedTarget) {
+    composer.classList.remove("dropping");
+  }
+});
+
+document.addEventListener("drop", (event) => {
+  if (isFileDrag(event)) {
+    event.preventDefault();
+    composer.classList.remove("dropping");
+    attachFiles(event.dataTransfer.files);
+  }
+});
 
 prompt.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
@@ -418,7 +515,7 @@ const replayHistory = (items) => {
       endReply();
       activity = null;
       turnHeadShown = false;
-      append(element("div", "message user", item.text));
+      appendUserMessage(item.text, item.attachments);
     } else if (item.kind === "assistant") {
       renderReply(item.text);
       endReply();

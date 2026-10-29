@@ -50,12 +50,26 @@ public sealed class ClaudeTranscriptsTests : IDisposable
 
         Assert.Equal(
             """
-            {"kind":"user","text":"Build"}
+            {"kind":"user","text":"Build","attachments":[]}
             {"kind":"assistant","text":"Building."}
             {"kind":"tool","id":"t1","name":"plc_build","status":"running"}
             {"kind":"tool","id":"t1","status":"failed"}
             """.ReplaceLineEndings("\n"),
             history);
+    }
+
+    [Fact]
+    public void ReplaysTheAttachedFilesOfAMessageWithoutText()
+    {
+        Write(
+            "chat",
+            DateTime.UtcNow,
+            AgentSetting(Agent),
+            """{"type":"user","message":{"content":[{"type":"text","text":"<context>\nSolution: x\nAttached file: C:\\shots\\hmi.png\n</context>\n\n"},{"type":"image","source":{"type":"base64","media_type":"image/png","data":"AA=="}}]}}""");
+
+        object item = Assert.Single(ClaudeTranscripts.History(folder, "chat"));
+
+        Assert.Equal("""{"kind":"user","text":"","attachments":["C:\\shots\\hmi.png"]}""", System.Text.Json.JsonSerializer.Serialize(item));
     }
 
     [Fact]

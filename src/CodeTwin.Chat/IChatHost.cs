@@ -19,7 +19,7 @@ internal interface IChatHost : IAsyncDisposable
 
     void SetToolPermissions(string? name);
 
-    Task SendAsync(string prompt, string? solution, string? activeElement, CancellationToken cancellationToken);
+    Task SendAsync(string prompt, IReadOnlyList<string> attachments, string? solution, string? activeElement, CancellationToken cancellationToken);
 
     Task AbortAsync(CancellationToken cancellationToken);
 
