@@ -38,6 +38,8 @@ public interface IPlcAutomationWriter : IPlcAutomation
     PlcElement CreateElement(PlcCreateRequest request);
     PlcElement RenameElement(string path, string newName);
     void DeleteElement(string path);
+    string ReadVisualization(string path);
+    void WriteVisualization(string path, string xml);
     PlcBuildResult Build();
     IReadOnlyList<PlcDiagnostic> GetDiagnostics();
 }
@@ -93,6 +95,7 @@ public enum PlcElementKind
     Union,
     Alias,
     Action,
+    Visualization,
 }
 
 public sealed class PlcCreateRequest

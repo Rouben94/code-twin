@@ -23,6 +23,7 @@ public static class McpToolCatalog
         ["union"] = PlcElementKind.Union,
         ["alias"] = PlcElementKind.Alias,
         ["action"] = PlcElementKind.Action,
+        ["visualization"] = PlcElementKind.Visualization,
     };
 
     public static object[] GetTools(bool includeWriteTools)
@@ -108,8 +109,8 @@ public static class McpToolCatalog
                     + "returnType is required for function and property and optional for method. A new property has no accessors: add them with kind propertyGet / propertySet and the property as parentPath; "
                     + "name is optional for accessors (always Get / Set). Edit an existing accessor at '<property path>/Get' or '<property path>/Set'. "
                     + "Methods and properties below an interface become interface members (declaration only). An action belongs to a program or function block and has only an implementation. "
-                    + "An alias needs its declaration (e.g. 'TYPE T_Speed : LREAL;\\nEND_TYPE'). "
-                    + "Optional declaration and implementation replace the generated text; folders take neither.",
+                    + "An alias needs its declaration (e.g. 'TYPE T_Speed : LREAL;\\nEND_TYPE'). A visualization is created empty; fill it with plc_write_visualization. "
+                    + "Optional declaration and implementation replace the generated text; folders and visualizations take neither.",
                 inputSchema = new
                 {
                     type = "object",
@@ -151,6 +152,33 @@ public static class McpToolCatalog
                     type = "object",
                     properties = new { path = new { type = "string" } },
                     required = new[] { "path" },
+                },
+            });
+            tools.Add(new
+            {
+                name = "plc_read_visualization",
+                description = "Read a PLC visualization as its TcVIS XML (the content of the .TcVIS file).",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new { path = new { type = "string" } },
+                    required = new[] { "path" },
+                },
+            });
+            tools.Add(new
+            {
+                name = "plc_write_visualization",
+                description = "Replace a PLC visualization with new TcVIS XML: start from plc_read_visualization and change it. "
+                    + "The <Visu Name> must stay the element's name. The visualization is deleted and the XML imported; if TwinCAT rejects it, the original is restored.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        path = new { type = "string" },
+                        xml = new { type = "string" },
+                    },
+                    required = new[] { "path", "xml" },
                 },
             });
             tools.Add(new

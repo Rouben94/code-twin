@@ -52,6 +52,11 @@ internal interface ITcSmTreeItem : IEnumerable
         [In, MarshalAs(UnmanagedType.Struct)] object? vInfo);
 
     void DeleteChild([In, MarshalAs(UnmanagedType.BStr)] string bstrChild);
+
+    void _VtblGap4_2();
+
+    [return: MarshalAs(UnmanagedType.BStr)]
+    string ProduceXml([In, MarshalAs(UnmanagedType.VariantBool)] bool bRecursive);
 }
 
 [ComImport]

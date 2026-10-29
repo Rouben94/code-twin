@@ -39,6 +39,14 @@ internal sealed class UiThreadPlcAutomation(JoinableTaskFactory joinableTaskFact
         return true;
     });
 
+    public string ReadVisualization(string path) => Run(() => reader.ReadVisualization(path));
+
+    public void WriteVisualization(string path, string xml) => Run(() =>
+    {
+        reader.WriteVisualization(path, xml);
+        return true;
+    });
+
     public PlcBuildResult Build() =>
         joinableTaskFactory.Run(async () =>
         {

@@ -2,7 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Xml.Linq;
 using CodeTwin.Core;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
@@ -13,6 +17,7 @@ namespace CodeTwin.Vsix;
 internal sealed class PlcTreeReader(DTE dte)
 {
     private const string PlcConfigurationPath = "TIPC";
+    private const int VisualizationImportSubType = 58;
 
     public IReadOnlyList<PlcElement> ListElements()
     {
@@ -198,6 +203,7 @@ internal sealed class PlcTreeReader(DTE dte)
             PlcElementKind.Union => (607, request.Declaration),
             PlcElementKind.Alias => (623, request.Declaration),
             PlcElementKind.Action => (608, Language),
+            PlcElementKind.Visualization => (619, null),
             _ => throw new ArgumentOutOfRangeException(nameof(request), request.Kind, "Unsupported PLC element kind."),
         };
 
@@ -237,6 +243,74 @@ internal sealed class PlcTreeReader(DTE dte)
         ITcSmTreeItem parent = FindItem(path.Substring(0, path.LastIndexOf('/')))
             ?? throw new KeyNotFoundException($"The parent of PLC element '{path}' was not found.");
         parent.DeleteChild(item.Name);
+    }
+
+    public string ReadVisualization(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return File.ReadAllText(GetFullPath(FindVisualization(path)));
+    }
+
+    /// <summary>
+    /// Replaces a visualization with new TcVIS content. The Automation Interface does not expose visualization content
+    /// and cannot import over an existing object, so the object is deleted and the new file imported; on failure the original is imported again.
+    /// </summary>
+    public void WriteVisualization(string path, string xml)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        ITcSmTreeItem visualization = FindVisualization(path);
+        ITcSmTreeItem parent = FindItem(path.Substring(0, path.LastIndexOf('/')))
+            ?? throw new KeyNotFoundException($"The parent of PLC element '{path}' was not found.");
+        string name = visualization.Name;
+
+        // DeleteChild also deletes the file, so both copies live outside the project.
+        string folder = Path.Combine(Path.GetTempPath(), "CodeTwin", Guid.NewGuid().ToString("N"));
+        string backup = Path.Combine(folder, "original", name + ".TcVIS");
+        string changed = Path.Combine(folder, name + ".TcVIS");
+        Directory.CreateDirectory(Path.GetDirectoryName(backup));
+        try
+        {
+            File.Copy(GetFullPath(visualization), backup);
+            File.WriteAllText(changed, xml, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+
+            parent.DeleteChild(name);
+            bool imported = false;
+            try
+            {
+                parent.CreateChild(name, VisualizationImportSubType, string.Empty, changed);
+                imported = FindChild(parent, name) is { ItemType: (int)PlcItemType.PLCVISOBJ };
+            }
+            finally
+            {
+                if (!imported)
+                {
+                    // TwinCAT adds content it cannot read as a plain file item instead of failing.
+                    string fileName = Path.GetFileName(changed);
+                    if (FindChild(parent, fileName) is not null)
+                    {
+                        parent.DeleteChild(fileName);
+                    }
+
+                    parent.CreateChild(name, VisualizationImportSubType, string.Empty, backup);
+                }
+            }
+
+            if (!imported)
+            {
+                throw new InvalidOperationException($"TwinCAT did not accept the TcVIS content for '{path}'. The original visualization was restored.");
+            }
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(folder, recursive: true);
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                ActivityLog.LogWarning(nameof(PlcTreeReader), $"Deleting the temporary folder '{folder}' failed: {exception.Message}");
+            }
+        }
     }
 
     /// <summary>Builds the solution and returns whether the build succeeded.</summary>
@@ -328,6 +402,39 @@ internal sealed class PlcTreeReader(DTE dte)
         }
 
         return item;
+    }
+
+    [SuppressMessage("Usage", "VSTHRD010", Justification = "The visualization entry points validate the Visual Studio UI thread before calling this helper.")]
+    private ITcSmTreeItem FindVisualization(string path)
+    {
+        ITcSmTreeItem item = FindPlcObject(path);
+        return item.ItemType == (int)PlcItemType.PLCVISOBJ
+            ? item
+            : throw new InvalidOperationException($"PLC element '{path}' is not a visualization.");
+    }
+
+    private static ITcSmTreeItem? FindChild(ITcSmTreeItem parent, string name)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        foreach (ITcSmTreeItem child in parent)
+        {
+            if (string.Equals(child.Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                return child;
+            }
+        }
+
+        return null;
+    }
+
+    private static string GetFullPath(ITcSmTreeItem item)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return XDocument.Parse(item.ProduceXml(bRecursive: false))
+            .Descendants("VSProperty")
+            .FirstOrDefault(property => string.Equals((string?)property.Element("Name"), "FullPath", StringComparison.Ordinal))
+            ?.Element("Value")?.Value
+            ?? throw new InvalidOperationException($"TwinCAT reported no file for PLC element '{item.Name}'.");
     }
 
     private static ITcSmTreeItem? FindItem(ITcSmTreeItem item, string path, string targetPath)

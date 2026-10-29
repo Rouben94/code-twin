@@ -8,6 +8,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace CodeTwin.Core;
 
@@ -222,6 +224,8 @@ public sealed class InProcessMcpServer : IDisposable
             "plc_create_element" => () => CreateElement(arguments),
             "plc_rename_element" => () => RenameElement(arguments),
             "plc_delete_element" => () => DeleteElement(arguments),
+            "plc_read_visualization" => () => ReadVisualization(arguments),
+            "plc_write_visualization" => () => WriteVisualization(arguments),
             "plc_build" => () => RequireWriter().Build(),
             "plc_get_errors" => () => RequireWriter().GetDiagnostics(),
             _ => throw new KeyNotFoundException($"Unknown MCP tool '{name}'."),
@@ -350,9 +354,9 @@ public sealed class InProcessMcpServer : IDisposable
 
         string? declaration = GetOptionalString(arguments, "declaration");
         string? implementation = GetOptionalString(arguments, "implementation");
-        if (elementKind == PlcElementKind.Folder && (declaration is not null || implementation is not null))
+        if (elementKind is PlcElementKind.Folder or PlcElementKind.Visualization && (declaration is not null || implementation is not null))
         {
-            throw new ArgumentException("A folder has no declaration or implementation.");
+            throw new ArgumentException($"A {kind} has no declaration or implementation.");
         }
 
         if (elementKind == PlcElementKind.Alias && string.IsNullOrWhiteSpace(declaration))
@@ -386,6 +390,39 @@ public sealed class InProcessMcpServer : IDisposable
         string path = GetRequiredString(arguments, "path");
         RequireWriter().DeleteElement(path);
         return new { deleted = true, path };
+    }
+
+    private object ReadVisualization(JsonElement arguments)
+    {
+        string path = GetRequiredString(arguments, "path");
+        return new { path, xml = RequireWriter().ReadVisualization(path) };
+    }
+
+    private object WriteVisualization(JsonElement arguments)
+    {
+        string path = GetRequiredString(arguments, "path");
+        string xml = GetRequiredString(arguments, "xml");
+        string name = path.Substring(path.LastIndexOf('/') + 1);
+        XDocument document;
+        try
+        {
+            document = XDocument.Parse(xml);
+        }
+        catch (XmlException exception)
+        {
+            throw new ArgumentException($"The 'xml' value is not valid XML: {exception.Message}");
+        }
+
+        string? visualizationName = document.Root?.Name.LocalName == "TcPlcObject"
+            ? (string?)document.Root.Element("Visu")?.Attribute("Name")
+            : null;
+        if (!string.Equals(visualizationName, name, StringComparison.Ordinal))
+        {
+            throw new ArgumentException($"The 'xml' value must be a TcVIS document with <TcPlcObject><Visu Name=\"{name}\">. Rename with plc_rename_element.");
+        }
+
+        RequireWriter().WriteVisualization(path, xml);
+        return new { written = true, path };
     }
 
     private static object ToolError(string message) => new

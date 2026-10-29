@@ -30,6 +30,8 @@ const toolLabels = {
   plc_create_element: "Create element",
   plc_rename_element: "Rename element",
   plc_delete_element: "Delete element",
+  plc_read_visualization: "Read visualization",
+  plc_write_visualization: "Write visualization",
   plc_save_solution: "Save solution",
   plc_build: "Build solution",
   plc_get_errors: "Read error list",

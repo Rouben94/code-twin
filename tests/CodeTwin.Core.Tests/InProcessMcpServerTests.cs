@@ -111,7 +111,7 @@ public sealed class InProcessMcpServerTests
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "secret");
 
         JsonElement tools = await SendAsync(client, 1, "tools/list", null);
-        Assert.Equal(11, tools.GetProperty("result").GetProperty("tools").GetArrayLength());
+        Assert.Equal(13, tools.GetProperty("result").GetProperty("tools").GetArrayLength());
 
         JsonElement write = await SendAsync(client, 2, "tools/call", new
         {
@@ -285,6 +285,44 @@ public sealed class InProcessMcpServerTests
     }
 
     [Fact]
+    public async Task VisualizationToolsAcceptOnlyTcVisOfTheSameVisualization()
+    {
+        var automation = new TestAutomation(new PlcElement("Demo", "Visu1", "Demo/TIPC/VISUs/Visu1", "PLCVISOBJ", null, null));
+        int port = ReservePort();
+        using var server = new InProcessMcpServer(automation, "secret", port);
+        server.Start();
+        using var client = new HttpClient { BaseAddress = new Uri(server.Endpoint) };
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "secret");
+
+        foreach (string invalid in new[] { "<TcPlcObject", "<Other />", "<TcPlcObject><Visu Name=\"Visu2\" /></TcPlcObject>" })
+        {
+            JsonElement rejected = await SendAsync(client, 1, "tools/call", new
+            {
+                name = "plc_write_visualization",
+                arguments = new { path = "Demo/TIPC/VISUs/Visu1", xml = invalid },
+            });
+            Assert.True(rejected.GetProperty("result").GetProperty("isError").GetBoolean());
+        }
+
+        Assert.Null(automation.VisualizationXml);
+
+        const string xml = "<TcPlcObject Version=\"1.1.0.1\"><Visu Name=\"Visu1\" /></TcPlcObject>";
+        JsonElement written = await SendAsync(client, 2, "tools/call", new
+        {
+            name = "plc_write_visualization",
+            arguments = new { path = "Demo/TIPC/VISUs/Visu1", xml },
+        });
+        Assert.True(written.GetProperty("result").GetProperty("structuredContent").GetProperty("written").GetBoolean());
+
+        JsonElement read = await SendAsync(client, 3, "tools/call", new
+        {
+            name = "plc_read_visualization",
+            arguments = new { path = "Demo/TIPC/VISUs/Visu1" },
+        });
+        Assert.Equal(xml, read.GetProperty("result").GetProperty("structuredContent").GetProperty("xml").GetString());
+    }
+
+    [Fact]
     public async Task MissingArgumentErrorNamesTheArgument()
     {
         var automation = new TestAutomation(new PlcElement("Demo", "MAIN", "Demo/TIPC/MAIN", "POU", "VAR\nEND_VAR", "x := 1;"));
@@ -407,6 +445,21 @@ public sealed class InProcessMcpServerTests
             }
 
             current = null;
+        }
+
+        public string? VisualizationXml { get; private set; }
+
+        public string ReadVisualization(string path) =>
+            ReadElement(path) is null ? throw new KeyNotFoundException(path) : VisualizationXml ?? string.Empty;
+
+        public void WriteVisualization(string path, string xml)
+        {
+            if (ReadElement(path) is null)
+            {
+                throw new KeyNotFoundException(path);
+            }
+
+            VisualizationXml = xml;
         }
 
         public IReadOnlyList<PlcElement> SearchElements(string query) =>

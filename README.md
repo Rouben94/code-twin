@@ -59,8 +59,9 @@ Supported today:
 
 - Listing, searching and reading PLC elements
 - Changing Structured Text code (declaration and implementation)
-- Creating folders, programs, function blocks, functions, interfaces, methods, properties, actions, structs, enums, unions, aliases and GVLs
+- Creating folders, programs, function blocks, functions, interfaces, methods, properties, actions, structs, enums, unions, aliases, GVLs and PLC visualizations
 - Renaming and deleting PLC elements
+- Reading and changing PLC visualizations (also served as web visu) as TcVIS XML
 - Building the solution and fixing compiler errors and warnings
 - Writing TcUnit tests (running them is up to you)
 - Several solutions or repositories open at the same time, each in its own shell
@@ -71,7 +72,7 @@ Not supported yet:
 
 - Moving PLC elements
 - Graphical languages (FBD, LD, SFC, CFC)
-- Visualizations (TwinCAT HMI, PLC visualizations, web visu)
+- TwinCAT HMI (TE2000)
 - I/O tree, devices and EtherCAT configuration
 - Motion (NC axes) and TwinCAT Safety configuration
 - Adding or changing library references
