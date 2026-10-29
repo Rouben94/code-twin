@@ -220,6 +220,8 @@ public sealed class InProcessMcpServer : IDisposable
             "plc_save_solution" => SaveSolution,
             "plc_replace_element_text" => () => ReplaceElementText(arguments),
             "plc_create_element" => () => CreateElement(arguments),
+            "plc_rename_element" => () => RenameElement(arguments),
+            "plc_delete_element" => () => DeleteElement(arguments),
             "plc_build" => () => RequireWriter().Build(),
             "plc_get_errors" => () => RequireWriter().GetDiagnostics(),
             _ => throw new KeyNotFoundException($"Unknown MCP tool '{name}'."),
@@ -353,6 +355,11 @@ public sealed class InProcessMcpServer : IDisposable
             throw new ArgumentException("A folder has no declaration or implementation.");
         }
 
+        if (elementKind == PlcElementKind.Alias && string.IsNullOrWhiteSpace(declaration))
+        {
+            throw new ArgumentException("The 'declaration' value is required for kind 'alias'.");
+        }
+
         return writer.CreateElement(new PlcCreateRequest(
             parentPath,
             name,
@@ -360,6 +367,25 @@ public sealed class InProcessMcpServer : IDisposable
             returnType,
             declaration,
             implementation));
+    }
+
+    private object RenameElement(JsonElement arguments)
+    {
+        string path = GetRequiredString(arguments, "path");
+        string newName = GetRequiredString(arguments, "newName");
+        if (string.IsNullOrWhiteSpace(newName) || newName.IndexOf('/') >= 0)
+        {
+            throw new ArgumentException("The 'newName' value must be a non-empty name without '/'.");
+        }
+
+        return RequireWriter().RenameElement(path, newName);
+    }
+
+    private object DeleteElement(JsonElement arguments)
+    {
+        string path = GetRequiredString(arguments, "path");
+        RequireWriter().DeleteElement(path);
+        return new { deleted = true, path };
     }
 
     private static object ToolError(string message) => new

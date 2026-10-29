@@ -31,6 +31,14 @@ internal sealed class UiThreadPlcAutomation(JoinableTaskFactory joinableTaskFact
 
     public PlcElement CreateElement(PlcCreateRequest request) => Run(() => reader.CreateElement(request));
 
+    public PlcElement RenameElement(string path, string newName) => Run(() => reader.RenameElement(path, newName));
+
+    public void DeleteElement(string path) => Run(() =>
+    {
+        reader.DeleteElement(path);
+        return true;
+    });
+
     public PlcBuildResult Build() =>
         joinableTaskFactory.Run(async () =>
         {

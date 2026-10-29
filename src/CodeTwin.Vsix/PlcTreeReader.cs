@@ -176,8 +176,13 @@ internal sealed class PlcTreeReader(DTE dte)
             ?? throw new KeyNotFoundException($"PLC element '{request.ParentPath}' was not found.");
 
         const int Language = 1; // IECLANGUAGE_ST
+        bool inInterface = (PlcItemType)parent.ItemType is PlcItemType.PLCITF or PlcItemType.PLCITFPROP;
         (int subType, object? info) = request.Kind switch
         {
+            PlcElementKind.Method when inInterface => (610, request.ReturnType),
+            PlcElementKind.Property when inInterface => (612, request.ReturnType),
+            PlcElementKind.PropertyGet when inInterface => (654, null),
+            PlcElementKind.PropertySet when inInterface => (655, null),
             PlcElementKind.Folder => (601, null),
             PlcElementKind.Program => (602, (object?)Language),
             PlcElementKind.FunctionBlock => (604, Language),
@@ -188,7 +193,11 @@ internal sealed class PlcTreeReader(DTE dte)
             PlcElementKind.PropertySet => (614, null),
             PlcElementKind.Struct => (606, request.Declaration),
             PlcElementKind.Enum => (605, request.Declaration),
-            PlcElementKind.GlobalVariableList => (615, request.Declaration),
+            PlcElementKind.GlobalVariableList => (615, request.Declaration ?? string.Empty),
+            PlcElementKind.Interface => (618, null),
+            PlcElementKind.Union => (607, request.Declaration),
+            PlcElementKind.Alias => (623, request.Declaration),
+            PlcElementKind.Action => (608, Language),
             _ => throw new ArgumentOutOfRangeException(nameof(request), request.Kind, "Unsupported PLC element kind."),
         };
 
@@ -210,6 +219,24 @@ internal sealed class PlcTreeReader(DTE dte)
 
         string path = request.ParentPath + "/" + created.Name;
         return ReadElement(path) ?? throw new InvalidOperationException($"PLC element '{path}' was not found after creation.");
+    }
+
+    public PlcElement RenameElement(string path, string newName)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        ITcSmTreeItem item = FindPlcObject(path);
+        item.Name = newName;
+        string newPath = path.Substring(0, path.LastIndexOf('/') + 1) + item.Name;
+        return ReadElement(newPath) ?? throw new InvalidOperationException($"PLC element '{newPath}' was not found after renaming.");
+    }
+
+    public void DeleteElement(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        ITcSmTreeItem item = FindPlcObject(path);
+        ITcSmTreeItem parent = FindItem(path.Substring(0, path.LastIndexOf('/')))
+            ?? throw new KeyNotFoundException($"The parent of PLC element '{path}' was not found.");
+        parent.DeleteChild(item.Name);
     }
 
     /// <summary>Builds the solution and returns whether the build succeeded.</summary>
@@ -288,6 +315,19 @@ internal sealed class PlcTreeReader(DTE dte)
         }
 
         return null;
+    }
+
+    // Projects, PLC nodes and the library manager are not PLC objects: renaming or deleting them would break the solution.
+    [SuppressMessage("Usage", "VSTHRD010", Justification = "The write entry points validate the Visual Studio UI thread before calling this helper.")]
+    private ITcSmTreeItem FindPlcObject(string path)
+    {
+        ITcSmTreeItem item = FindItem(path) ?? throw new KeyNotFoundException($"PLC element '{path}' was not found.");
+        if (item.ItemType < (int)PlcItemType.PLCFOLDER || item.ItemType == (int)PlcItemType.PLCLIBMAN)
+        {
+            throw new InvalidOperationException($"'{path}' is not a PLC object inside a PLC project.");
+        }
+
+        return item;
     }
 
     private static ITcSmTreeItem? FindItem(ITcSmTreeItem item, string path, string targetPath)

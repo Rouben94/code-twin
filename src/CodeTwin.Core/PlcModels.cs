@@ -36,6 +36,8 @@ public interface IPlcAutomationWriter : IPlcAutomation
     PlcReplaceResult ReplaceElementText(string path, string find, string replace, PlcTextScope scope, bool replaceAll);
     void Save();
     PlcElement CreateElement(PlcCreateRequest request);
+    PlcElement RenameElement(string path, string newName);
+    void DeleteElement(string path);
     PlcBuildResult Build();
     IReadOnlyList<PlcDiagnostic> GetDiagnostics();
 }
@@ -87,6 +89,10 @@ public enum PlcElementKind
     Struct,
     Enum,
     GlobalVariableList,
+    Interface,
+    Union,
+    Alias,
+    Action,
 }
 
 public sealed class PlcCreateRequest

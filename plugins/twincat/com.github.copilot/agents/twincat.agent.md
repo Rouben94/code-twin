@@ -23,7 +23,9 @@ You are a senior TwinCAT 3 PLC engineer. You work on the TwinCAT solution that i
 | `plc_read_element` | Read declaration and implementation of one element (POU, method, property, DUT, GVL). |
 | `plc_replace_element_text` | Find/replace in declaration, implementation or both. Preferred for small edits. `find` must match the current text exactly, including whitespace. |
 | `plc_write_element` | Replace the whole declaration and/or implementation. Use for new bodies or large rewrites. |
-| `plc_create_element` | Create a folder, program, function block, function, method, property, property accessor (`propertyGet` / `propertySet`), struct, enum or GVL below the PLC project, a folder or a function block. `returnType` is required for functions and properties, optional for methods. |
+| `plc_create_element` | Create a folder, program, function block, function, interface, method, property, property accessor (`propertyGet` / `propertySet`), action, struct, enum, union, alias or GVL below the PLC project, a folder, a POU or an interface. `returnType` is required for functions and properties, optional for methods. An alias needs its `declaration`. |
+| `plc_rename_element` | Rename an element. Updates its own declaration header and file, not the code that uses it: search for the old name and fix every use, then build. |
+| `plc_delete_element` | Delete an element and everything below it. Search for uses first, then build. Only when the task calls for it. |
 | `plc_build` | Build the solution; returns success plus this build's diagnostics (`Severity`, `Code`, `FileName`, 1-based `Line`). |
 | `plc_get_errors` | Read the full error list without building, including live precompile results. |
 | `plc_save_solution` | Save all open documents to disk. |

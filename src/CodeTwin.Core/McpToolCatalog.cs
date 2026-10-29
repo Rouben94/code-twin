@@ -19,6 +19,10 @@ public static class McpToolCatalog
         ["struct"] = PlcElementKind.Struct,
         ["enum"] = PlcElementKind.Enum,
         ["gvl"] = PlcElementKind.GlobalVariableList,
+        ["interface"] = PlcElementKind.Interface,
+        ["union"] = PlcElementKind.Union,
+        ["alias"] = PlcElementKind.Alias,
+        ["action"] = PlcElementKind.Action,
     };
 
     public static object[] GetTools(bool includeWriteTools)
@@ -100,9 +104,11 @@ public static class McpToolCatalog
             tools.Add(new
             {
                 name = "plc_create_element",
-                description = "Create a folder, Structured Text POU, method, property, property accessor, DUT, or GVL below a PLC element (e.g. the PLC project, a folder or a function block). "
+                description = "Create a folder, Structured Text POU, interface, method, property, property accessor, action, DUT (struct, enum, union, alias), or GVL below a PLC element (e.g. the PLC project, a folder or a function block). "
                     + "returnType is required for function and property and optional for method. A new property has no accessors: add them with kind propertyGet / propertySet and the property as parentPath; "
                     + "name is optional for accessors (always Get / Set). Edit an existing accessor at '<property path>/Get' or '<property path>/Set'. "
+                    + "Methods and properties below an interface become interface members (declaration only). An action belongs to a program or function block and has only an implementation. "
+                    + "An alias needs its declaration (e.g. 'TYPE T_Speed : LREAL;\\nEND_TYPE'). "
                     + "Optional declaration and implementation replace the generated text; folders take neither.",
                 inputSchema = new
                 {
@@ -117,6 +123,34 @@ public static class McpToolCatalog
                         implementation = new { type = "string" },
                     },
                     required = new[] { "parentPath", "kind" },
+                },
+            });
+            tools.Add(new
+            {
+                name = "plc_rename_element",
+                description = "Rename a PLC element (POU, method, property, DUT, GVL, folder, ...). TwinCAT updates the element's own declaration header and file name, "
+                    + "but not the code that uses the old name: search for it with plc_search_elements, update every use, then plc_build.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new
+                    {
+                        path = new { type = "string" },
+                        newName = new { type = "string" },
+                    },
+                    required = new[] { "path", "newName" },
+                },
+            });
+            tools.Add(new
+            {
+                name = "plc_delete_element",
+                description = "Delete a PLC element and everything below it (a folder with its content, a POU with its methods and properties). "
+                    + "Code that uses it is not changed: check with plc_search_elements first and run plc_build afterwards.",
+                inputSchema = new
+                {
+                    type = "object",
+                    properties = new { path = new { type = "string" } },
+                    required = new[] { "path" },
                 },
             });
             tools.Add(new

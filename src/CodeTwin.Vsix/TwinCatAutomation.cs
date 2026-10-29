@@ -50,6 +50,8 @@ internal interface ITcSmTreeItem : IEnumerable
         [In] int nSubType,
         [In, MarshalAs(UnmanagedType.BStr)] string bstrBefore,
         [In, MarshalAs(UnmanagedType.Struct)] object? vInfo);
+
+    void DeleteChild([In, MarshalAs(UnmanagedType.BStr)] string bstrChild);
 }
 
 [ComImport]

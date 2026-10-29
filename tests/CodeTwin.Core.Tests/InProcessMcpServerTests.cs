@@ -111,7 +111,7 @@ public sealed class InProcessMcpServerTests
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "secret");
 
         JsonElement tools = await SendAsync(client, 1, "tools/list", null);
-        Assert.Equal(9, tools.GetProperty("result").GetProperty("tools").GetArrayLength());
+        Assert.Equal(11, tools.GetProperty("result").GetProperty("tools").GetArrayLength());
 
         JsonElement write = await SendAsync(client, 2, "tools/call", new
         {
@@ -227,6 +227,61 @@ public sealed class InProcessMcpServerTests
             arguments = new { parentPath = "Demo/TIPC/POUs", kind = "method" },
         });
         Assert.True(missingName.GetProperty("result").GetProperty("isError").GetBoolean());
+
+        JsonElement aliasWithoutDeclaration = await SendAsync(client, 11, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", name = "T_Speed", kind = "alias" },
+        });
+        Assert.True(aliasWithoutDeclaration.GetProperty("result").GetProperty("isError").GetBoolean());
+
+        JsonElement itf = await SendAsync(client, 12, "tools/call", new
+        {
+            name = "plc_create_element",
+            arguments = new { parentPath = "Demo/TIPC/POUs", name = "I_Axis", kind = "interface" },
+        });
+        Assert.False(itf.GetProperty("result").TryGetProperty("isError", out _));
+        Assert.Equal(PlcElementKind.Interface, automation.LastCreateRequest?.Kind);
+    }
+
+    [Fact]
+    public async Task RenameAndDeleteToolsUpdateTheAutomationAdapter()
+    {
+        var automation = new TestAutomation(new PlcElement("Demo", "FB_Old", "Demo/TIPC/POUs/FB_Old", "POU", null, null));
+        int port = ReservePort();
+        using var server = new InProcessMcpServer(automation, "secret", port);
+        server.Start();
+        using var client = new HttpClient { BaseAddress = new Uri(server.Endpoint) };
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "secret");
+
+        JsonElement invalidName = await SendAsync(client, 1, "tools/call", new
+        {
+            name = "plc_rename_element",
+            arguments = new { path = "Demo/TIPC/POUs/FB_Old", newName = "POUs/FB_New" },
+        });
+        Assert.True(invalidName.GetProperty("result").GetProperty("isError").GetBoolean());
+
+        JsonElement renamed = await SendAsync(client, 2, "tools/call", new
+        {
+            name = "plc_rename_element",
+            arguments = new { path = "Demo/TIPC/POUs/FB_Old", newName = "FB_New" },
+        });
+        Assert.Equal("Demo/TIPC/POUs/FB_New", renamed.GetProperty("result").GetProperty("structuredContent").GetProperty("Path").GetString());
+
+        JsonElement missing = await SendAsync(client, 3, "tools/call", new
+        {
+            name = "plc_delete_element",
+            arguments = new { path = "Demo/TIPC/POUs/FB_Old" },
+        });
+        Assert.True(missing.GetProperty("result").GetProperty("isError").GetBoolean());
+
+        JsonElement deleted = await SendAsync(client, 4, "tools/call", new
+        {
+            name = "plc_delete_element",
+            arguments = new { path = "Demo/TIPC/POUs/FB_New" },
+        });
+        Assert.True(deleted.GetProperty("result").GetProperty("structuredContent").GetProperty("deleted").GetBoolean());
+        Assert.Empty(automation.ListElements());
     }
 
     [Fact]
@@ -322,14 +377,37 @@ public sealed class InProcessMcpServerTests
 
     private sealed class TestAutomation(PlcElement initial) : IPlcAutomationWriter
     {
-        private PlcElement element = initial;
+        private PlcElement? current = initial;
+
+        private PlcElement Element => current ?? throw new KeyNotFoundException("The element was deleted.");
 
         public bool Saved { get; private set; }
 
-        public IReadOnlyList<PlcElement> ListElements() => new[] { element };
+        public IReadOnlyList<PlcElement> ListElements() => current is null ? [] : [current];
 
         public PlcElement? ReadElement(string path) =>
-            string.Equals(path, element.Path, StringComparison.OrdinalIgnoreCase) ? element : null;
+            current is not null && string.Equals(path, current.Path, StringComparison.OrdinalIgnoreCase) ? current : null;
+
+        public PlcElement RenameElement(string path, string newName)
+        {
+            if (ReadElement(path) is null)
+            {
+                throw new KeyNotFoundException(path);
+            }
+
+            current = new PlcElement(Element.ProjectName, newName, path[..(path.LastIndexOf('/') + 1)] + newName, Element.ItemType, Element.Declaration, Element.Implementation);
+            return current;
+        }
+
+        public void DeleteElement(string path)
+        {
+            if (ReadElement(path) is null)
+            {
+                throw new KeyNotFoundException($"PLC element '{path}' was not found.");
+            }
+
+            current = null;
+        }
 
         public IReadOnlyList<PlcElement> SearchElements(string query) =>
             new DelegatingPlcAutomation(ListElements).SearchElements(query);
@@ -341,14 +419,14 @@ public sealed class InProcessMcpServerTests
                 throw new KeyNotFoundException(path);
             }
 
-            element = new PlcElement(
-                element.ProjectName,
-                element.Name,
-                element.Path,
-                element.ItemType,
-                declaration ?? element.Declaration,
-                implementation ?? element.Implementation);
-            return element;
+            current = new PlcElement(
+                Element.ProjectName,
+                Element.Name,
+                Element.Path,
+                Element.ItemType,
+                declaration ?? Element.Declaration,
+                implementation ?? Element.Implementation);
+            return Element;
         }
 
         public PlcReplaceResult ReplaceElementText(string path, string find, string replace, PlcTextScope scope, bool replaceAll)
@@ -358,8 +436,8 @@ public sealed class InProcessMcpServerTests
                 throw new KeyNotFoundException(path);
             }
 
-            string? declaration = element.Declaration;
-            string? implementation = element.Implementation;
+            string? declaration = Element.Declaration;
+            string? implementation = Element.Implementation;
             int count = 0;
             if (scope is PlcTextScope.Declaration or PlcTextScope.Both)
             {
@@ -376,8 +454,8 @@ public sealed class InProcessMcpServerTests
                 throw new InvalidOperationException("Not found.");
             }
 
-            element = new PlcElement(element.ProjectName, element.Name, element.Path, element.ItemType, declaration, implementation);
-            return new PlcReplaceResult(element, count);
+            current = new PlcElement(Element.ProjectName, Element.Name, Element.Path, Element.ItemType, declaration, implementation);
+            return new PlcReplaceResult(Element, count);
         }
 
         public void Save() => Saved = true;
@@ -395,7 +473,7 @@ public sealed class InProcessMcpServerTests
             }
 
             LastCreateRequest = request;
-            return new PlcElement(element.ProjectName, request.Name, request.ParentPath + "/" + request.Name, request.Kind.ToString(), request.Declaration, request.Implementation);
+            return new PlcElement(Element.ProjectName, request.Name, request.ParentPath + "/" + request.Name, request.Kind.ToString(), request.Declaration, request.Implementation);
         }
 
         public Exception? CreateFailure { get; set; }
