@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -419,6 +420,22 @@ public sealed class InProcessMcpServer : IDisposable
         if (!string.Equals(visualizationName, name, StringComparison.Ordinal))
         {
             throw new ArgumentException($"The 'xml' value must be a TcVIS document with <TcPlcObject><Visu Name=\"{name}\">. Rename with plc_rename_element.");
+        }
+
+        // TwinCAT rejects a TcVIS without saying why when a serialized type has no <TypeList> entry.
+        HashSet<string> listedTypes = new(
+            document.Descendants("TypeList").Elements("Type").Select(type => (string?)type.Attribute("n") ?? string.Empty),
+            StringComparer.Ordinal);
+        string[] missingTypes = document.Descendants()
+            .SelectMany(element => element.Attributes())
+            .Where(attribute => attribute.Name.LocalName is "t" or "cet" or "et" or "ckt" or "cvt" && !listedTypes.Contains(attribute.Value))
+            .Select(attribute => attribute.Value)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (missingTypes.Length > 0)
+        {
+            throw new ArgumentException($"The <TypeList> has no entry for these types used in the XML: {string.Join(", ", missingTypes)}. "
+                + "Copy their <Type> entries with GUIDs from a visualization that uses them.");
         }
 
         RequireWriter().WriteVisualization(path, xml);

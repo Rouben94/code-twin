@@ -294,7 +294,14 @@ public sealed class InProcessMcpServerTests
         using var client = new HttpClient { BaseAddress = new Uri(server.Endpoint) };
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "secret");
 
-        foreach (string invalid in new[] { "<TcPlcObject", "<Other />", "<TcPlcObject><Visu Name=\"Visu2\" /></TcPlcObject>" })
+        string[] invalidDocuments =
+        [
+            "<TcPlcObject",
+            "<Other />",
+            "<TcPlcObject><Visu Name=\"Visu2\" /></TcPlcObject>",
+            "<TcPlcObject><Visu Name=\"Visu1\"><XmlArchive><Data><o t=\"VisualObject\" /></Data><TypeList /></XmlArchive></Visu></TcPlcObject>",
+        ];
+        foreach (string invalid in invalidDocuments)
         {
             JsonElement rejected = await SendAsync(client, 1, "tools/call", new
             {
@@ -306,7 +313,8 @@ public sealed class InProcessMcpServerTests
 
         Assert.Null(automation.VisualizationXml);
 
-        const string xml = "<TcPlcObject Version=\"1.1.0.1\"><Visu Name=\"Visu1\" /></TcPlcObject>";
+        const string xml = "<TcPlcObject Version=\"1.1.0.1\"><Visu Name=\"Visu1\"><XmlArchive><Data><o t=\"VisualObject\" /></Data>"
+            + "<TypeList><Type n=\"VisualObject\">{f18bec89-9fef-401d-9953-2f11739a6808}</Type></TypeList></XmlArchive></Visu></TcPlcObject>";
         JsonElement written = await SendAsync(client, 2, "tools/call", new
         {
             name = "plc_write_visualization",

@@ -93,5 +93,6 @@ Colors are ARGB as unsigned 32-bit numbers in a list: `4278190080` = `0xFF000000
 - **Text, position, size, colors, variables:** change the `Value` next to the `Id`. When you move or resize, update the center values as well.
 - **Variables** use the full instance path the PLC compiles (`MAIN.fbAxis.bReady`, `GVL_Io.bDoorClosed`).
 - **New element:** copy an existing element of the same type from the same or another visualization. Give the copy a new `VisualElementIdentification` GUID, the next free `VisualElementIdentifier` (`GenElemInst_<n>`) and `VisualElementId`, and raise `UniqueIdGenerator` above every used number. Build afterwards; if TwinCAT rejects the file, the original stays in place.
+- **Type list:** every type named in a `t`, `cet`, `et`, `ckt` or `cvt` attribute needs one `<Type n="...">{guid}</Type>` entry in the `<TypeList>` at the end of `XmlArchive`. When a copied element brings a new type, copy its entry from the source visualization. `plc_write_visualization` rejects XML with missing entries and names them.
 - **Delete an element:** remove its `<o>` from `VisualElementList`.
 - Don't hand-write elements from scratch: unknown members get default values that differ from the editor's.
