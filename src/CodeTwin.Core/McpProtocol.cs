@@ -215,7 +215,7 @@ public sealed class InProcessMcpServer : IDisposable
         {
             "plc_list_elements" => () => automation.ListElements(),
             "plc_read_element" => () => ReadElement(arguments),
-            "plc_search_elements" => () => automation.SearchElements(arguments.GetProperty("query").GetString() ?? string.Empty),
+            "plc_search_elements" => () => automation.SearchElements(GetRequiredString(arguments, "query")),
             "plc_write_element" => () => WriteElement(arguments),
             "plc_save_solution" => SaveSolution,
             "plc_replace_element_text" => () => ReplaceElementText(arguments),
@@ -252,7 +252,7 @@ public sealed class InProcessMcpServer : IDisposable
 
     private object ReadElement(JsonElement arguments)
     {
-        string path = arguments.GetProperty("path").GetString() ?? string.Empty;
+        string path = GetRequiredString(arguments, "path");
         PlcElement? element = automation.ReadElement(path);
         return element is null
             ? new { error = "PLC element was not found.", path }
@@ -266,7 +266,7 @@ public sealed class InProcessMcpServer : IDisposable
             throw new InvalidOperationException("This CodeTwin instance is read-only.");
         }
 
-        string path = arguments.GetProperty("path").GetString() ?? string.Empty;
+        string path = GetRequiredString(arguments, "path");
         string? declaration = arguments.TryGetProperty("declaration", out JsonElement declarationValue)
             ? declarationValue.GetString()
             : null;
@@ -294,11 +294,11 @@ public sealed class InProcessMcpServer : IDisposable
             throw new InvalidOperationException("This CodeTwin instance is read-only.");
         }
 
-        string path = arguments.GetProperty("path").GetString() ?? string.Empty;
-        string find = arguments.GetProperty("find").GetString() ?? string.Empty;
-        string replace = arguments.GetProperty("replace").GetString() ?? string.Empty;
-        string scope = arguments.GetProperty("scope").GetString() ?? string.Empty;
-        bool replaceAll = arguments.GetProperty("replaceAll").GetBoolean();
+        string path = GetRequiredString(arguments, "path");
+        string find = GetRequiredString(arguments, "find");
+        string replace = GetRequiredString(arguments, "replace");
+        string scope = GetRequiredString(arguments, "scope");
+        bool replaceAll = GetRequiredBoolean(arguments, "replaceAll");
         if (find.Length == 0)
         {
             throw new ArgumentException("The 'find' value cannot be empty.");
@@ -322,8 +322,8 @@ public sealed class InProcessMcpServer : IDisposable
             throw new InvalidOperationException("This CodeTwin instance is read-only.");
         }
 
-        string parentPath = arguments.GetProperty("parentPath").GetString() ?? string.Empty;
-        string kind = arguments.GetProperty("kind").GetString() ?? string.Empty;
+        string parentPath = GetRequiredString(arguments, "parentPath");
+        string kind = GetRequiredString(arguments, "kind");
         if (!McpToolCatalog.ElementKinds.TryGetValue(kind, out PlcElementKind elementKind))
         {
             throw new ArgumentException($"The 'kind' value must be one of: {string.Join(", ", McpToolCatalog.ElementKinds.Keys)}.");
@@ -367,6 +367,25 @@ public sealed class InProcessMcpServer : IDisposable
         content = new[] { new { type = "text", text = message } },
         isError = true,
     };
+
+    // Agents sometimes call a tool before loading its schema; naming the argument lets them correct the call.
+    private static JsonElement GetRequired(JsonElement arguments, string name) =>
+        arguments.TryGetProperty(name, out JsonElement value) && value.ValueKind != JsonValueKind.Null
+            ? value
+            : throw new ArgumentException($"Missing required argument '{name}'.");
+
+    private static string GetRequiredString(JsonElement arguments, string name) =>
+        GetRequired(arguments, name) is { ValueKind: JsonValueKind.String } value
+            ? value.GetString() ?? string.Empty
+            : throw new ArgumentException($"The '{name}' argument must be a string.");
+
+    private static bool GetRequiredBoolean(JsonElement arguments, string name) =>
+        GetRequired(arguments, name).ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => throw new ArgumentException($"The '{name}' argument must be true or false."),
+        };
 
     private static string? GetOptionalString(JsonElement arguments, string name) =>
         arguments.TryGetProperty(name, out JsonElement value) && value.ValueKind == JsonValueKind.String

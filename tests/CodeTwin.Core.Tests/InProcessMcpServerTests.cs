@@ -230,6 +230,27 @@ public sealed class InProcessMcpServerTests
     }
 
     [Fact]
+    public async Task MissingArgumentErrorNamesTheArgument()
+    {
+        var automation = new TestAutomation(new PlcElement("Demo", "MAIN", "Demo/TIPC/MAIN", "POU", "VAR\nEND_VAR", "x := 1;"));
+        int port = ReservePort();
+        using var server = new InProcessMcpServer(automation, "secret", port);
+        server.Start();
+        using var client = new HttpClient { BaseAddress = new Uri(server.Endpoint) };
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", "secret");
+
+        JsonElement replace = await SendAsync(client, 1, "tools/call", new
+        {
+            name = "plc_replace_element_text",
+            arguments = new { path = "Demo/TIPC/MAIN", find = "x := 1;", replace = "x := 2;", target = "implementation" },
+        });
+
+        JsonElement result = replace.GetProperty("result");
+        Assert.True(result.GetProperty("isError").GetBoolean());
+        Assert.Equal("Missing required argument 'scope'.", result.GetProperty("content")[0].GetProperty("text").GetString());
+    }
+
+    [Fact]
     public async Task BuildToolsReturnDiagnostics()
     {
         var automation = new TestAutomation(new PlcElement("Demo", "MAIN", "Demo/TIPC/MAIN", "POU", null, null));
