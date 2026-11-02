@@ -41,7 +41,7 @@ To update, run a newer setup. To uninstall, use **Settings > Apps**.
   </picture>
 </p>
 
-- **In the shell:** open your solution, then **Tools > CodeTwin > Chat**. The chat uses GitHub Copilot; to use your Claude subscription instead, set **AI provider** to Claude in **Tools > Options > CodeTwin > Chat**.
+- **In the shell:** open your solution, then **Tools > CodeTwin > Chat**. The chat uses GitHub Copilot; to use your Claude subscription instead, set **AI provider** to Claude in **Tools > CodeTwin > Settings**.
 - **In Copilot CLI:** run `copilot --agent twincat:twincat` in your project folder.
 - **In the Copilot app:** open your project folder and ask it to follow the `twincat` agent.
 

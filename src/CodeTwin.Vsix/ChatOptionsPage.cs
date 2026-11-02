@@ -15,7 +15,7 @@ public enum ChatProvider
     Claude,
 }
 
-/// <summary>Tools > Options > CodeTwin > Chat. Stored per user; applying a change restarts the chat on the chosen provider.</summary>
+/// <summary>Tools > Options > CodeTwin > Chat, also opened from Tools > CodeTwin > Settings. Stored per user; applying a change restarts the chat on the chosen provider.</summary>
 [ComVisible(true)]
 [Guid("b7d2e4a1-3c6f-4e8b-9a05-2f1d8c7e6b43")]
 public sealed class ChatOptionsPage : DialogPage

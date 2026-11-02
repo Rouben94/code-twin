@@ -60,6 +60,7 @@ public sealed class CodeTwinPackage : AsyncPackage
             AddCommand(commands, 0x0101, () => VsShellUtilities.OpenSystemBrowser($"{RepositoryUrl}#readme"));
             AddCommand(commands, 0x0102, () => VsShellUtilities.OpenSystemBrowser($"{RepositoryUrl}/issues/new"));
             AddCommand(commands, 0x0103, ShowAbout);
+            AddCommand(commands, 0x0104, () => ShowOptionPage(typeof(ChatOptionsPage)));
         }
     }
 

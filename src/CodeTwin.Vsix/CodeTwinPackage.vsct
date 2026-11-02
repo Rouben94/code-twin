@@ -38,6 +38,14 @@
           <LocCanonicalName>.Tools.CodeTwin.Chat</LocCanonicalName>
         </Strings>
       </Button>
+      <Button guid="guidCodeTwinCommandSet" id="cmdidSettings" priority="0x0200" type="Button">
+        <Parent guid="guidCodeTwinCommandSet" id="grpidWindows" />
+        <Strings>
+          <ButtonText>Settings...</ButtonText>
+          <CanonicalName>.Tools.CodeTwin.Settings</CanonicalName>
+          <LocCanonicalName>.Tools.CodeTwin.Settings</LocCanonicalName>
+        </Strings>
+      </Button>
       <Button guid="guidCodeTwinCommandSet" id="cmdidDocumentation" priority="0x0100" type="Button">
         <Parent guid="guidCodeTwinCommandSet" id="grpidHelp" />
         <Strings>
@@ -77,6 +85,7 @@
       <IDSymbol name="cmdidDocumentation" value="0x0101" />
       <IDSymbol name="cmdidReportBug" value="0x0102" />
       <IDSymbol name="cmdidAbout" value="0x0103" />
+      <IDSymbol name="cmdidSettings" value="0x0104" />
       <IDSymbol name="menuidCodeTwin" value="0x1000" />
       <IDSymbol name="grpidToolsMenu" value="0x1100" />
       <IDSymbol name="grpidWindows" value="0x1101" />
