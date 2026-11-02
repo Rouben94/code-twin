@@ -83,4 +83,6 @@ Not supported yet:
 
 More is coming, and this list is updated as features are added.
 
-Licensed under [MPL-2.0](LICENSE).
+Licensed under [MPL-2.0](LICENSE). Third-party components: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
+
+Not affiliated with or endorsed by Beckhoff Automation. TwinCAT is a registered trademark of Beckhoff Automation GmbH.

@@ -36,6 +36,7 @@ Type: filesandordirs; Name: "{app}\plugins"
 Source: "..\src\CodeTwin.Vsix\bin\Release\net48\CodeTwin.Vsix.vsix"; DestDir: "{app}"
 Source: "..\tools\Install-TcXaeShell.ps1"; DestDir: "{app}"
 Source: "..\LICENSE"; DestDir: "{app}"
+Source: "..\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"
 Source: "..\assets\icons\codetwin.ico"; DestDir: "{app}"
 Source: "marketplace.json"; DestDir: "{app}\.github\plugin"
 Source: "..\plugins\twincat\*"; Excludes: "\bin\*"; DestDir: "{app}\plugins\twincat"; Flags: recursesubdirs
