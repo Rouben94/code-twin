@@ -6,7 +6,7 @@
 - All projects are SDK-style: files are included automatically, so never add `<Compile>` items.
 - Shared settings (`net10.0`, `Nullable`, `LangVersion`, `TreatWarningsAsErrors`, version) live in `Directory.Build.props`. Don't repeat them in a `.csproj`.
 - Warnings are errors. Fix the cause; don't suppress or add to `WarningsNotAsErrors`.
-- Add packages with `dotnet add package` at an explicit version, and only with a reason. A package reachable from `src/Core` or `src/Provisioning` lands in the Configurator CLI's closure, which `tests/Configurator.UnitTests` guards.
+- Add packages with `dotnet add package` at an explicit version, and only with a reason.
 - Use current C#: file-scoped namespaces, records, primary constructors, collection expressions, pattern matching, switch expressions, `using`/`await using` declarations.
 - Nullable reference types are on. Model absence with `?`; don't silence warnings with `!` without a reason.
 - `IOptions<T>` bound from `appsettings.json` / `appsettings.{Environment}.json`. No `ConfigurationManager`, `app.config` or config transforms.
@@ -15,9 +15,8 @@
 ### Async
 
 - Async all the way. Never block on a task with `.Result`, `.Wait()` or `.GetAwaiter().GetResult()`.
-- Use `ConfigureAwait(false)` in library and service code reachable from the HMI (`src/Provisioning`, non-component classes in `src/Hmi`, `tools/Configurator`). Never in Razor components, which must resume on the circuit's context.
+- Use `ConfigureAwait(false)` in `src/CodeTwin.Core`, `src/CodeTwin.Mcp` and `src/CodeTwin.Chat`. Never in `src/CodeTwin.Vsix` code that must resume on the shell's UI thread.
 - Pass `CancellationToken` through every async call chain.
-- One exception: the encrypted project archive is decrypted synchronously on purpose (`AesZipProjectArchive`). Don't switch it to `CopyToAsync`.
 
 ### Time, strings, culture
 
