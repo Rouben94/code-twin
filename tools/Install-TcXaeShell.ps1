@@ -8,7 +8,7 @@
     extension the way the shell's Extension Manager discovers it: it extracts the VSIX into the
     per-user Extensions folder, enables it in the ExtensionManager registry key and flags the
     extension set as changed so the shell rebuilds its pkgdef cache. No admin rights needed.
-    Close TcXaeShell before running. See docs/spike.md for the details.
+    Close TcXaeShell before running.
 #>
 [CmdletBinding()]
 param(

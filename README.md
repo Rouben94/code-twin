@@ -51,7 +51,7 @@ Then just ask, for example:
 - `Write TcUnit tests for FB_Valve.`
 - `What does compiler error C0077 mean?`
 
-More details, and how to build CodeTwin: [docs/development.md](docs/development.md).
+Overview and how to build CodeTwin: [docs/overview.md](docs/overview.md).
 
 ## What is supported
 
