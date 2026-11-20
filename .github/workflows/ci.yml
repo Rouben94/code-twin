@@ -10,10 +10,10 @@ on:
         description: Publish a GitHub release (main only)
         type: boolean
         default: false
-      version:
-        description: Release version (MAJOR.MINOR.PATCH), empty for the next patch
-        type: string
-        default: ''
+      major:
+        description: Major release (otherwise the merged branches decide between minor and patch)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -28,6 +28,7 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+      pull-requests: read
     defaults:
       run:
         shell: pwsh
@@ -42,22 +43,27 @@ jobs:
 
       - name: Compute version
         id: version
-        # A release run may set the version; otherwise MAJOR.MINOR comes from Directory.Build.props
-        # and PATCH is one above the last release tag of that MAJOR.MINOR.
+        # Bumps the last release tag: MAJOR when ticked, MINOR when a feature/ branch was merged since, otherwise PATCH.
+        # Builds that do not release are labelled with the next patch.
         env:
-          REQUESTED_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE: ${{ inputs.release }}
+          MAJOR: ${{ inputs.major }}
         run: |
-          if ($env:REQUESTED_VERSION) {
-            if ($env:REQUESTED_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw "Version '$env:REQUESTED_VERSION' is not MAJOR.MINOR.PATCH." }
-            if (git tag --list "v$env:REQUESTED_VERSION") { throw "Tag v$env:REQUESTED_VERSION already exists." }
-            $version = $env:REQUESTED_VERSION
-          } else {
-            $base = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
-            $majorMinor = ($base -split '\.')[0..1] -join '.'
-            $pattern = '^v' + [regex]::Escape($majorMinor) + '\.(\d+)$'
-            $patches = @(git tag --list "v$majorMinor.*" | Where-Object { $_ -match $pattern } | ForEach-Object { [int]$Matches[1] })
-            $patch = if ($patches.Count) { ($patches | Measure-Object -Maximum).Maximum + 1 } else { 0 }
-            $version = "$majorMinor.$patch"
+          $last = git tag --list 'v*' --sort=-v:refname | Where-Object { $_ -match '^v\d+\.\d+\.\d+$' } | Select-Object -First 1
+          [int[]]$parts = if ($last) { $last.TrimStart('v').Split('.') } else { 0, 0, 0 }
+          $bump = 'patch'
+          if ($env:RELEASE -eq 'true') {
+            $commits = @(if ($last) { git rev-list "$last..HEAD" } else { git rev-list HEAD })
+            if (-not $commits) { throw "Nothing was merged since $last." }
+            $branches = @($commits | ForEach-Object { gh api "repos/$env:GITHUB_REPOSITORY/commits/$_/pulls" --jq '.[].head.ref' } | Sort-Object -Unique)
+            Write-Host "Merged branches since ${last}: $($branches -join ', ')"
+            $bump = if ($env:MAJOR -eq 'true') { 'major' } elseif ($branches -like 'feature/*') { 'minor' } else { 'patch' }
+          }
+          $version = switch ($bump) {
+            'major' { "$($parts[0] + 1).0.0" }
+            'minor' { "$($parts[0]).$($parts[1] + 1).0" }
+            'patch' { "$($parts[0]).$($parts[1]).$($parts[2] + 1)" }
           }
           "value=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Version $version"
