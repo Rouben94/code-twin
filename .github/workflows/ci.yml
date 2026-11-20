@@ -5,13 +5,22 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish a GitHub release (main only)
+        type: boolean
+        default: false
+      version:
+        description: Release version (MAJOR.MINOR.PATCH), empty for the next patch
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Pull request runs are replaced by newer pushes; main runs queue so every release gets its own patch number.
+  # Pull request runs are replaced by newer pushes; main runs queue so two releases never get the same version.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -33,14 +42,23 @@ jobs:
 
       - name: Compute version
         id: version
-        # MAJOR.MINOR comes from Directory.Build.props; PATCH is one above the last release tag of that MAJOR.MINOR.
+        # A release run may set the version; otherwise MAJOR.MINOR comes from Directory.Build.props
+        # and PATCH is one above the last release tag of that MAJOR.MINOR.
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
-          $base = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
-          $majorMinor = ($base -split '\.')[0..1] -join '.'
-          $pattern = '^v' + [regex]::Escape($majorMinor) + '\.(\d+)$'
-          $patches = @(git tag --list "v$majorMinor.*" | Where-Object { $_ -match $pattern } | ForEach-Object { [int]$Matches[1] })
-          $patch = if ($patches.Count) { ($patches | Measure-Object -Maximum).Maximum + 1 } else { 0 }
-          $version = "$majorMinor.$patch"
+          if ($env:REQUESTED_VERSION) {
+            if ($env:REQUESTED_VERSION -notmatch '^\d+\.\d+\.\d+$') { throw "Version '$env:REQUESTED_VERSION' is not MAJOR.MINOR.PATCH." }
+            if (git tag --list "v$env:REQUESTED_VERSION") { throw "Tag v$env:REQUESTED_VERSION already exists." }
+            $version = $env:REQUESTED_VERSION
+          } else {
+            $base = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
+            $majorMinor = ($base -split '\.')[0..1] -join '.'
+            $pattern = '^v' + [regex]::Escape($majorMinor) + '\.(\d+)$'
+            $patches = @(git tag --list "v$majorMinor.*" | Where-Object { $_ -match $pattern } | ForEach-Object { [int]$Matches[1] })
+            $patch = if ($patches.Count) { ($patches | Measure-Object -Maximum).Maximum + 1 } else { 0 }
+            $version = "$majorMinor.$patch"
+          }
           "value=$version" >> $env:GITHUB_OUTPUT
           Write-Host "Version $version"
 
@@ -66,7 +84,7 @@ jobs:
           retention-days: 14
 
       - name: Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

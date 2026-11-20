@@ -19,7 +19,7 @@ external clients (Copilot CLI and app, Claude Code, Claude Desktop).
 - CodeTwin Chat in the shell on GitHub Copilot or Claude: modes, models, permissions, history,
   private chats, attachments.
 - Multi-repo sessions through the bridge (`initialize` with several paths).
-- Setup (per user), CI with automatic releases, security review.
+- Setup (per user), CI with manual releases, security review.
 
 ## Next
 1. **Permission modes**: read / edit / build / online, and blocked AMS Net IDs.
