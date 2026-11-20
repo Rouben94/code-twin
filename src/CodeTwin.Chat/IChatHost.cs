@@ -5,9 +5,8 @@ internal interface IChatHost : IAsyncDisposable
 {
     Task StartAsync(CancellationToken cancellationToken);
 
-    Task PublishModelsAsync(CancellationToken cancellationToken);
-
-    Task PublishQuotaAsync(CancellationToken cancellationToken);
+    /// <summary>Publishes the models and the plan usage of the signed-in account.</summary>
+    Task PublishAccountAsync(CancellationToken cancellationToken);
 
     Task<bool> PublishAuthStatusAsync(CancellationToken cancellationToken);
 

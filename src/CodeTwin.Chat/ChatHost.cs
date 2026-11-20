@@ -36,7 +36,13 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
 
     public Task StartAsync(CancellationToken cancellationToken) => client.StartAsync(cancellationToken);
 
-    public async Task PublishModelsAsync(CancellationToken cancellationToken)
+    public async Task PublishAccountAsync(CancellationToken cancellationToken)
+    {
+        await PublishModelsAsync(cancellationToken).ConfigureAwait(false);
+        await PublishQuotaAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task PublishModelsAsync(CancellationToken cancellationToken)
     {
         IList<ModelInfo> models = await client.ListModelsAsync(cancellationToken).ConfigureAwait(false);
         channel.Send(new
@@ -57,7 +63,7 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
     }
 
 #pragma warning disable GHCP001 // The account quota RPC is the only SDK source for the premium request allowance.
-    public async Task PublishQuotaAsync(CancellationToken cancellationToken)
+    private async Task PublishQuotaAsync(CancellationToken cancellationToken)
     {
         AccountGetQuotaResult result = await client.Rpc.Account.GetQuotaAsync(null, null, cancellationToken).ConfigureAwait(false);
         KeyValuePair<string, AccountQuotaSnapshot> premium = result.QuotaSnapshots
@@ -158,7 +164,6 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
         privateChat = isPrivate;
-        approveAll = false;
     }
 
     public async Task PublishSessionsAsync(string? solution, CancellationToken cancellationToken)
@@ -195,7 +200,6 @@ internal sealed class ChatHost(ChatOptions options, ChatChannel channel) : IChat
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
         privateChat = false;
-        approveAll = false;
 
         session = await client.ResumeSessionAsync(
             id,

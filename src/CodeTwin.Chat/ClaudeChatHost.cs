@@ -29,6 +29,7 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
     private bool sessionStored;
     private string? cliEffort;
     private string? model;
+    private string? runningModel;
     private string? reasoningEffort;
     private string mode = "interactive";
     private volatile bool approveAll;
@@ -42,39 +43,14 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
 
     private sealed record PlanDecision(bool Approved, string? Action, string? Feedback);
 
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        string version = await RunAsync("--version", cancellationToken).ConfigureAwait(false);
-        await Console.Error.WriteLineAsync($"Using Claude Code {version.Trim()} from {options.CliPath}").ConfigureAwait(false);
-    }
+    // Every Claude Code start costs seconds (much more on a cold start), so none runs before the chat accepts commands.
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    // Claude Code lists the models of the signed-in account in its initialize response; no prompt is sent.
-    public async Task PublishModelsAsync(CancellationToken cancellationToken)
-    {
-        await using ClaudeCli probe = ClaudeCli.Start(options.CliPath, NeutralDirectory(), [.. ClaudeCli.StreamArguments, "--strict-mcp-config"], _ => Task.CompletedTask);
-        using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30));
-        JsonNode? response = await probe.RequestAsync(new { subtype = "initialize" }, timeout.Token).ConfigureAwait(false);
-        List<JsonNode> list = [.. (response?["models"] as JsonArray ?? []).OfType<JsonNode>()];
-        models = [.. list.Select(info => (info["value"]?.GetValue<string>() ?? string.Empty, info["resolvedModel"]?.GetValue<string>()))];
-        channel.Send(new
-        {
-            type = "models",
-            models = list
-                .Select(info => new
-                {
-                    id = info["value"]?.GetValue<string>(),
-                    name = info["displayName"]?.GetValue<string>(),
-                    multiplier = (double?)null,
-                    contextWindow = (long?)null,
-                    efforts = info["supportsEffort"]?.GetValue<bool>() == true ? info["supportedEffortLevels"] : null,
-                    defaultEffort = (string?)null,
-                }),
-        });
-    }
-
-    // Claude Code answers /usage itself, without a model call; later model calls update the limits through rate_limit_event.
-    public async Task PublishQuotaAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// One probe process answers both: the initialize response lists the account's models, and /usage is answered by
+    /// Claude Code itself, without a model call. Later model calls update the limits through rate_limit_event.
+    /// </summary>
+    public async Task PublishAccountAsync(CancellationToken cancellationToken)
     {
         TaskCompletionSource<JsonNode?> report = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using ClaudeCli probe = ClaudeCli.Start(
@@ -94,10 +70,34 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
 
                 return Task.CompletedTask;
             });
-        probe.SendUserMessage("/usage");
 
         using CancellationTokenSource timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        timeout.CancelAfter(TimeSpan.FromSeconds(60));
+        JsonNode? response = await probe.RequestAsync(new { subtype = "initialize" }, timeout.Token).ConfigureAwait(false);
+        List<JsonNode> list = [.. (response?["models"] as JsonArray ?? []).OfType<JsonNode>()];
+        models = [.. list.Select(info => (info["value"]?.GetValue<string>() ?? string.Empty, info["resolvedModel"]?.GetValue<string>()))];
+        channel.Send(new
+        {
+            type = "models",
+            models = list
+                .Select(info => new
+                {
+                    id = info["value"]?.GetValue<string>(),
+                    name = ModelName(info, list),
+                    multiplier = (double?)null,
+                    contextWindow = (long?)null,
+                    efforts = info["supportsEffort"]?.GetValue<bool>() == true ? info["supportedEffortLevels"] : null,
+                    defaultEffort = (string?)null,
+                }),
+        });
+
+        // A chat that started before the list arrived reported its model by id; report it as the picker lists it.
+        if (runningModel is not null)
+        {
+            channel.Send(new { type = "model", id = PickerModel(model, runningModel, models), effort = reasoningEffort });
+        }
+
+        probe.SendUserMessage("/usage");
         if (UsageLimits(await report.Task.WaitAsync(timeout.Token).ConfigureAwait(false)) is { Count: > 0 } items)
         {
             channel.Send(new { type = "limits", items });
@@ -190,7 +190,6 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
         privateChat = isPrivate;
-        approveAll = false;
     }
 
     public Task PublishSessionsAsync(string? solution, CancellationToken cancellationToken)
@@ -218,7 +217,6 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
         RejectPendingPermissions();
         await CloseSessionAsync().ConfigureAwait(false);
         privateChat = false;
-        approveAll = false;
 
         sessionId = id;
         sessionSolution = solution;
@@ -345,6 +343,7 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
     {
         await CloseProcessAsync().ConfigureAwait(false);
         attachedFiles = [];
+        runningModel = null;
         sessionId = null;
         sessionSolution = null;
         sessionStored = false;
@@ -449,7 +448,9 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
         switch (message["subtype"]?.GetValue<string>())
         {
             case "init":
-                channel.Send(new { type = "model", id = PickerModel(model, message["model"]?.GetValue<string>(), models), effort = reasoningEffort });
+                Console.Error.WriteLine($"Using Claude Code {message["claude_code_version"]?.GetValue<string>()} from {options.CliPath}");
+                runningModel = message["model"]?.GetValue<string>();
+                channel.Send(new { type = "model", id = PickerModel(model, runningModel, models), effort = reasoningEffort });
                 break;
             case "status" when message["permissionMode"]?.GetValue<string>() is { } permissionMode:
                 mode = permissionMode switch
@@ -575,6 +576,27 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
         ?? models.FirstOrDefault(entry => entry.Id == running || (running is not null && entry.Resolved == running)).Id
         ?? running;
 
+    /// <summary>
+    /// Claude Code names its default entry "Default (recommended)", which hides the model it runs. Name that model
+    /// instead, as the other entry that resolves to it calls it: "Default (Opus 5.5)".
+    /// </summary>
+    internal static string? ModelName(JsonNode info, IReadOnlyList<JsonNode> models)
+    {
+        string? name = info["displayName"]?.GetValue<string>();
+        string? id = info["value"]?.GetValue<string>();
+        string? resolved = info["resolvedModel"]?.GetValue<string>();
+        if (id != "default" || resolved is null)
+        {
+            return name;
+        }
+
+        string? resolvedName = models
+            .Where(other => other["value"]?.GetValue<string>() != "default" && other["resolvedModel"]?.GetValue<string>() == resolved)
+            .Select(other => other["displayName"]?.GetValue<string>())
+            .FirstOrDefault(other => other is not null);
+        return $"Default ({resolvedName ?? resolved})";
+    }
+
     /// <summary>The subscription's usage windows, which Claude Code reports after every model call.</summary>
     internal static IReadOnlyList<PlanLimit> PlanLimits(JsonNode message)
     {
@@ -635,9 +657,12 @@ internal sealed class ClaudeChatHost(ChatOptions options, ChatChannel channel) :
         {
             UseShellExecute = false,
             CreateNoWindow = true,
+            // Not inherited: the sidecar's stdin carries the chat commands, which the sidecar reads at the same time.
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         }) ?? throw new InvalidOperationException("Claude Code could not be started.");
+        process.StandardInput.Close();
         Task<string> output = process.StandardOutput.ReadToEndAsync(cancellationToken);
         _ = process.StandardError.ReadToEndAsync(cancellationToken);
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);

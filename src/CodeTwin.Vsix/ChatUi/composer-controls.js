@@ -19,7 +19,7 @@
 
   const permissionLevels = [
     { id: "ask", label: "Always ask", detail: "Asks before shell commands, file edits, web access and reads outside the project. Project reads and CodeTwin tools run directly." },
-    { id: "approveAll", label: "Approve all", detail: "Runs all tools without asking, until you start or open another chat." },
+    { id: "approveAll", label: "Approve all", detail: "Runs all tools without asking, in this and every new chat, until you switch back." },
   ];
 
   const planActions = {
@@ -35,9 +35,7 @@
 
   let models = [];
   let mode = modes.some((m) => m.id === storage.get("mode")) ? storage.get("mode") : "interactive";
-  // Not remembered: every chat starts with "Always ask". Clears the value older versions stored.
-  let permissions = "ask";
-  storage.set("permissions", null);
+  let permissions = permissionLevels.some((p) => p.id === storage.get("permissions")) ? storage.get("permissions") : "ask";
   let model = storage.get("model");
   let effort = storage.get("effort");
   let context = { current: 0, limit: 0 };
@@ -155,6 +153,7 @@
 
   const setPermissions = (id) => {
     permissions = id;
+    storage.set("permissions", permissions);
     showMode();
     post({ type: "setPermissions", permissions });
   };
@@ -406,6 +405,13 @@
     showModel();
   })(handlers.providerChanged);
 
+  // A new sidecar starts with defaults; the mode and tool permissions must reach it even when its models never load.
+  handlers.ready = ((showReady) => (message) => {
+    showReady(message);
+    post({ type: "setMode", mode });
+    post({ type: "setPermissions", permissions });
+  })(handlers.ready);
+
   handlers.session = ((startSession) => (message) => {
     startSession(message);
     resetSessionUsage();
@@ -418,8 +424,6 @@
   document.addEventListener("chatreset", () => {
     closeMenu();
     resetSessionUsage();
-    permissions = "ask";
-    showMode();
   });
 
   prompt.addEventListener("keydown", (event) => {
