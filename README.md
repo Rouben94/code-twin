@@ -27,10 +27,10 @@ flowchart LR
 
 You need Windows x64, TwinCAT XAE Shell (TwinCAT 3.1.4026), the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) and [Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli) or [Claude Code](https://code.claude.com/docs/en/setup).
 
-1. Close TwinCAT XAE Shell.
-2. Run `CodeTwin-Setup-<version>.exe` from the [releases](https://github.com/Rouben94/code-twin/releases). No admin rights needed.
+Run `CodeTwin-Setup-<version>.exe` from the [latest release](https://github.com/Rouben94/code-twin/releases/latest). No admin rights needed.
 
-To update, run a newer setup. To uninstall, use **Settings > Apps**.
+- **Update:** the shell shows a notice when a new version is out. Click **Install**, or use **Tools > CodeTwin > Check for Updates**.
+- **Uninstall:** **Settings > Apps > CodeTwin**.
 
 ## Use
 
