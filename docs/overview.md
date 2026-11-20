@@ -57,3 +57,7 @@ tools\Install-TcXaeShell.ps1
 ```
 
 The first command builds everything, the second installs the extension into TcXaeShell (close the shell first). `installer\Build-Setup.ps1` builds the full setup into `artifacts\` and needs [Inno Setup 6](https://jrsoftware.org/isinfo.php).
+
+## Release
+
+Merges into `main` are built and tested but not released. To release, run the **CI** workflow on `main` from the Actions tab with **Publish a GitHub release** ticked. Leave the version empty for the next patch, or enter one (for example `0.2.0`).
