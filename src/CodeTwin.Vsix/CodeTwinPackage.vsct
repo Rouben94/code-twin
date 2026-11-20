@@ -62,6 +62,14 @@
           <LocCanonicalName>.Tools.CodeTwin.ReportBug</LocCanonicalName>
         </Strings>
       </Button>
+      <Button guid="guidCodeTwinCommandSet" id="cmdidCheckForUpdates" priority="0x0050" type="Button">
+        <Parent guid="guidCodeTwinCommandSet" id="grpidAbout" />
+        <Strings>
+          <ButtonText>Check for Updates...</ButtonText>
+          <CanonicalName>.Tools.CodeTwin.CheckForUpdates</CanonicalName>
+          <LocCanonicalName>.Tools.CodeTwin.CheckForUpdates</LocCanonicalName>
+        </Strings>
+      </Button>
       <Button guid="guidCodeTwinCommandSet" id="cmdidAbout" priority="0x0100" type="Button">
         <Parent guid="guidCodeTwinCommandSet" id="grpidAbout" />
         <Strings>
@@ -86,6 +94,7 @@
       <IDSymbol name="cmdidReportBug" value="0x0102" />
       <IDSymbol name="cmdidAbout" value="0x0103" />
       <IDSymbol name="cmdidSettings" value="0x0104" />
+      <IDSymbol name="cmdidCheckForUpdates" value="0x0105" />
       <IDSymbol name="menuidCodeTwin" value="0x1000" />
       <IDSymbol name="grpidToolsMenu" value="0x1100" />
       <IDSymbol name="grpidWindows" value="0x1101" />

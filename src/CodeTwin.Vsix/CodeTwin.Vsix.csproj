@@ -42,6 +42,7 @@
     <Reference Include="System.Xaml" />
     <Reference Include="System.Design" />
     <Reference Include="CustomMarshalers" />
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
 
   <!-- Feeds $(Version) from Directory.Build.props (or -p:Version) into source.extension.vsixmanifest. -->
