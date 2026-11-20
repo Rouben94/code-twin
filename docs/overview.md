@@ -60,4 +60,8 @@ The first command builds everything, the second installs the extension into TcXa
 
 ## Release
 
-Merges into `main` are built and tested but not released. To release, run the **CI** workflow on `main` from the Actions tab with **Publish a GitHub release** ticked. Leave the version empty for the next patch, or enter one (for example `0.2.0`).
+Merges into `main` are built and tested but not released. To release, run the **CI** workflow on `main` from the Actions tab with **Publish a GitHub release** ticked. The version is the last release plus a bump:
+
+- **MAJOR** when **Major release** is ticked (`0.4.1` → `1.0.0`).
+- **MINOR** when a `feature/` branch was merged since the last release (`0.4.1` → `0.5.0`).
+- **PATCH** otherwise, for `bugfix/` and other branches (`0.4.1` → `0.4.2`).
