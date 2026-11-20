@@ -123,6 +123,22 @@ public sealed class ClaudeTranscriptsTests : IDisposable
         Assert.Equal(expected, ClaudeChatHost.PickerModel(selected, running, models));
     }
 
+    [Theory]
+    [InlineData(0, "Default (Opus 5.5)")]
+    [InlineData(1, "Opus 5.5")]
+    [InlineData(2, "Default (claude-next-1)")]
+    public void NamesTheModelBehindTheDefaultEntry(int index, string expected)
+    {
+        JsonArray models = JsonNode.Parse("""
+            [{"value":"default","resolvedModel":"claude-opus-5-5","displayName":"Default (recommended)"},
+             {"value":"opus","resolvedModel":"claude-opus-5-5","displayName":"Opus 5.5"},
+             {"value":"default","resolvedModel":"claude-next-1","displayName":"Default (recommended)"}]
+            """)!.AsArray();
+        List<JsonNode> list = [.. models.OfType<JsonNode>()];
+
+        Assert.Equal(expected, ClaudeChatHost.ModelName(list[index], list));
+    }
+
     [Fact]
     public void ReadsTheFiveHourAndWeeklyLimits()
     {

@@ -43,17 +43,8 @@ catch (Exception exception)
 
 channel.Ready(useClaude ? "Claude" : "GitHub Copilot");
 
-try
-{
-    if (await host.PublishAuthStatusAsync(CancellationToken.None))
-    {
-        await PublishAccountDataAsync();
-    }
-}
-catch (Exception exception)
-{
-    await Console.Error.WriteLineAsync($"Reading the {provider} sign-in status failed: {exception.Message}");
-}
+// Reading the account takes several CLI round trips; the chat handles commands meanwhile, so a first message is not held back.
+_ = PublishSignInAsync();
 
 using StreamReader input = new(Console.OpenStandardInput(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 while (await input.ReadLineAsync() is { } line)
@@ -133,12 +124,26 @@ async Task HandleAsync(string line)
     }
 }
 
+async Task PublishSignInAsync()
+{
+    try
+    {
+        if (await host.PublishAuthStatusAsync(CancellationToken.None))
+        {
+            await PublishAccountDataAsync();
+        }
+    }
+    catch (Exception exception)
+    {
+        await Console.Error.WriteLineAsync($"Reading the {provider} sign-in status failed: {exception.Message}");
+    }
+}
+
 async Task PublishAccountDataAsync()
 {
     try
     {
-        await host.PublishModelsAsync(CancellationToken.None);
-        await host.PublishQuotaAsync(CancellationToken.None);
+        await host.PublishAccountAsync(CancellationToken.None);
     }
     catch (Exception exception)
     {
