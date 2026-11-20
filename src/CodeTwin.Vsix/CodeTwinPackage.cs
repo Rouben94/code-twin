@@ -18,6 +18,7 @@ namespace CodeTwin.Vsix;
 [ProvideToolWindow(typeof(ChatToolWindow), Style = VsDockStyle.Tabbed, Window = ToolWindowGuids.SolutionExplorer)]
 [ProvideMenuResource("Menus.ctmenu", 1)]
 [ProvideOptionPage(typeof(ChatOptionsPage), "CodeTwin", "Chat", 0, 0, true)]
+[ProvideOptionPage(typeof(UpdateOptionsPage), "CodeTwin", "Updates", 0, 0, true)]
 public sealed class CodeTwinPackage : AsyncPackage
 {
     public const string PackageGuidString = "4a8e2c71-9d3b-4f56-8e0a-1c7b5d9f2e63";
@@ -26,10 +27,13 @@ public sealed class CodeTwinPackage : AsyncPackage
 
     private CodeTwinMcpHost? mcpHost;
     private ChatServices? chatServices;
+    private UpdateChecker? updateChecker;
 
     private static string Version =>
         typeof(CodeTwinPackage).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0]
         ?? "unknown";
+
+    private static Version InstalledVersion => System.Version.TryParse(Version, out System.Version? version) ? version : new System.Version(0, 0, 0);
 
     public override IVsAsyncToolWindowFactory? GetAsyncToolWindowFactory(Guid toolWindowType) =>
         toolWindowType == typeof(ChatToolWindow).GUID ? this : null;
@@ -61,7 +65,11 @@ public sealed class CodeTwinPackage : AsyncPackage
             AddCommand(commands, 0x0102, () => VsShellUtilities.OpenSystemBrowser($"{RepositoryUrl}/issues/new"));
             AddCommand(commands, 0x0103, ShowAbout);
             AddCommand(commands, 0x0104, () => ShowOptionPage(typeof(ChatOptionsPage)));
+            AddCommand(commands, 0x0105, CheckForUpdates);
         }
+
+        updateChecker = new UpdateChecker(this, (UpdateOptionsPage)GetDialogPage(typeof(UpdateOptionsPage)), InstalledVersion);
+        JoinableTaskFactory.RunAsync(() => updateChecker.CheckOnStartupAsync(DisposalToken)).FileAndForget("CodeTwin/CheckForUpdates");
     }
 
     protected override void Dispose(bool disposing)
@@ -80,6 +88,14 @@ public sealed class CodeTwinPackage : AsyncPackage
     private void ShowChat() =>
         JoinableTaskFactory.RunAsync(() => ShowToolWindowAsync(typeof(ChatToolWindow), 0, create: true, DisposalToken))
             .FileAndForget("CodeTwin/ShowChat");
+
+    private void CheckForUpdates()
+    {
+        if (updateChecker is { } checker)
+        {
+            JoinableTaskFactory.RunAsync(() => checker.CheckNowAsync(DisposalToken)).FileAndForget("CodeTwin/CheckForUpdatesNow");
+        }
+    }
 
     private void ShowAbout() =>
         VsShellUtilities.ShowMessageBox(
