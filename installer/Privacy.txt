@@ -1,0 +1,9 @@
+CodeTwin privacy
+
+CodeTwin itself collects no telemetry and sends nothing about you or your projects to its authors.
+
+It connects to other systems only in these cases:
+
+- Update check: when you open a solution, CodeTwin asks GitHub (api.github.com) for the latest CodeTwin release. GitHub sees your IP address. Turn it off in Tools > Options > CodeTwin > Updates.
+- Updates: when you choose Install, the setup is downloaded from github.com.
+- AI chat: when you use CodeTwin Chat, Copilot CLI or Claude Code, your prompts and the project content the agent reads go to the AI provider you chose (GitHub Copilot or Anthropic Claude) under your own account and that provider's privacy policy.

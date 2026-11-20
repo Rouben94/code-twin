@@ -22,6 +22,7 @@ UninstallDisplayName=CodeTwin
 UninstallDisplayIcon={app}\codetwin.ico
 SetupIconFile=..\assets\icons\codetwin.ico
 WizardStyle=modern
+InfoBeforeFile=Privacy.txt
 ; Restart Manager would shut down code-twin-mcp inside running Copilot sessions and break the processes setup starts afterwards (0xC0000142); setup asks the user to close them instead.
 CloseApplications=no
 WizardSmallImageFile=..\assets\icons\codetwin-64.png,..\assets\icons\codetwin-128.png

@@ -83,6 +83,10 @@ Not supported yet:
 
 More is coming, and this list is updated as features are added.
 
+## Privacy
+
+CodeTwin collects no telemetry. It only connects to GitHub to check for and download updates (turn the check off in **Tools > Options > CodeTwin > Updates**), and the chat sends your prompts and the project content the agent reads to the AI provider you chose, under your own account. Details: [installer/Privacy.txt](installer/Privacy.txt).
+
 Licensed under [MPL-2.0](LICENSE). Third-party components: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).
 
 Not affiliated with or endorsed by Beckhoff Automation. TwinCAT is a registered trademark of Beckhoff Automation GmbH.
