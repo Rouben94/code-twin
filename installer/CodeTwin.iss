@@ -23,7 +23,7 @@ UninstallDisplayIcon={app}\codetwin.ico
 SetupIconFile=..\assets\icons\codetwin.ico
 WizardStyle=modern
 InfoBeforeFile=Privacy.txt
-; Restart Manager would shut down code-twin-mcp inside running Copilot sessions and break the processes setup starts afterwards (0xC0000142); setup asks the user to close them instead.
+; Restart Manager broke the processes setup starts afterwards (0xC0000142); setup ends code-twin-mcp itself after asking.
 CloseApplications=no
 WizardSmallImageFile=..\assets\icons\codetwin-64.png,..\assets\icons\codetwin-128.png
 Compression=lzma2
@@ -51,30 +51,70 @@ Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -Fil
 Type: filesandordirs; Name: "{app}"
 
 [Code]
-function ProcessRunning(const ImageName: String): Boolean;
+// WMI instead of tasklist: no console processes are started while processes are being ended.
+function QueryProcesses(const Condition: String): Variant;
 var
-  ResultCode: Integer;
+  Locator, Service: Variant;
 begin
-  Result := Exec(ExpandConstant('{cmd}'), '/c tasklist /FI "IMAGENAME eq ' + ImageName + '" /NH | find /I "' + ImageName + '"',
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+  Locator := CreateOleObject('WbemScripting.SWbemLocator');
+  Service := Locator.ConnectServer('.', 'root\CIMV2');
+  Result := Service.ExecQuery('SELECT ProcessId FROM Win32_Process WHERE ' + Condition);
 end;
 
-function WaitForClosed(const ImageName, Message: String): Boolean;
+function ProcessRunning(const ImageName: String): Boolean;
+begin
+  Result := QueryProcesses('Name = "' + ImageName + '"').Count > 0;
+end;
+
+function McpServerCondition: String;
+begin
+  Result := ExpandConstant('{app}\plugins\twincat\bin\code-twin-mcp.exe');
+  StringChangeEx(Result, '\', '\\', True);
+  Result := 'ExecutablePath = "' + Result + '"';
+end;
+
+function WaitForShellClosed: Boolean;
 begin
   Result := True;
-  while ProcessRunning(ImageName) do
-    if SuppressibleMsgBox(Message + ', then click Retry.', mbError, MB_RETRYCANCEL, IDCANCEL) = IDCANCEL then
+  while ProcessRunning('TcXaeShell.exe') do
+    if SuppressibleMsgBox('Close TwinCAT XAE Shell, then click Retry.', mbError, MB_RETRYCANCEL, IDCANCEL) = IDCANCEL then
     begin
       Result := False;
       Exit;
     end;
 end;
 
-// code-twin-mcp.exe is locked while a Copilot session uses the plugin.
+// code-twin-mcp.exe is locked while a Copilot session (Copilot CLI or the Copilot app, which keeps running in the tray) uses the plugin.
+function EndMcpServers: Boolean;
+var
+  Processes: Variant;
+  I, Attempt: Integer;
+begin
+  Processes := QueryProcesses(McpServerCondition);
+  Result := Processes.Count = 0;
+  if Result then
+    Exit;
+
+  if SuppressibleMsgBox('CodeTwin is running in Copilot sessions (Copilot CLI or the Copilot app). End CodeTwin in these sessions?' + #13#10#13#10 +
+    'They lose the TwinCAT tools until you restart them. Let running TwinCAT agents finish first.', mbConfirmation, MB_YESNO, IDNO) = IDNO then
+    Exit;
+
+  for I := 0 to Processes.Count - 1 do
+    Processes.ItemIndex(I).Terminate(0);
+
+  for Attempt := 1 to 40 do
+  begin
+    Result := QueryProcesses(McpServerCondition).Count = 0;
+    if Result then
+      Exit;
+    Sleep(250);
+  end;
+  SuppressibleMsgBox('CodeTwin could not be ended in all Copilot sessions. Close them, then run setup again.', mbError, MB_OK, IDOK);
+end;
+
 function WaitForClients: Boolean;
 begin
-  Result := WaitForClosed('TcXaeShell.exe', 'Close TwinCAT XAE Shell')
-    and WaitForClosed('code-twin-mcp.exe', 'Close all Copilot sessions that use CodeTwin (Copilot CLI and the Copilot app)');
+  Result := WaitForShellClosed and EndMcpServers;
 end;
 
 function InitializeSetup: Boolean;
@@ -137,7 +177,10 @@ function Copilot(const Arguments: String): Boolean;
 var
   ResultCode: Integer;
 begin
-  Result := Exec(ExpandConstant('{cmd}'), '/c copilot ' + Arguments, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+  Result := Exec(ExpandConstant('{cmd}'), '/c copilot ' + Arguments, '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Not started: ResultCode is a Windows error code; started: the exit code.
+  Log(Format('copilot %s: started=%d, code=%d', [Arguments, Ord(Result), ResultCode]));
+  Result := Result and (ResultCode = 0);
 end;
 
 // Copilot CLI and the Copilot app share the plugin registry; the plugin is loaded live from {app}.
